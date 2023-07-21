@@ -8,10 +8,12 @@ from methods.supervised import run_supervised_experiment
 from methods.detectgpt import run_detectgpt_experiments
 from methods.gptzero import run_gptzero_experiment
 from methods.metric_based import get_ll, get_rank, get_entropy, get_rank_GLTR, run_threshold_experiment, run_GLTR_experiment
+from pathlib import Path
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=str, default="TruthfulQA")
+    parser.add_argument('--dataset_filepath', type=str, default="datasets/TruthfulQA_LMMs.csv")
+    parser.add_argument('--dataset_filetype', type=str, default="auto", choices=["auto", "csv", "xls", "xlsx", "json", "xml", "huggingface"])
     parser.add_argument('--detectLLM', type=str, default="ChatGPT")
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--base_model_name', type=str, default="gpt2-medium")
@@ -48,12 +50,12 @@ if __name__ == '__main__':
     START_DATE = datetime.datetime.now().strftime('%Y-%m-%d')
     START_TIME = datetime.datetime.now().strftime('%H-%M-%S-%f')
 
-    print(f'Loading dataset {args.dataset}...')
-    data = dataset_loader.load(args.dataset, detectLLM=args.detectLLM)
+    print(f'Loading dataset {args.dataset_filepath}...')
+    data = dataset_loader.load_from_file(args.dataset_filepath, args.dataset_filetype, detectLLM=args.detectLLM)
     # data = filter_test_data(data, max_length=25)
 
     base_model_name = args.base_model_name.replace('/', '_')
-    SAVE_PATH = f"results/{base_model_name}-{args.mask_filling_model_name}/{args.dataset}"
+    SAVE_PATH = f"results/{base_model_name}-{args.mask_filling_model_name}/{Path(args.dataset_filepath).stem}"
     if not os.path.exists(SAVE_PATH):
         os.makedirs(SAVE_PATH)
     print(f"Saving results to absolute path: {os.path.abspath(SAVE_PATH)}")

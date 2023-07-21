@@ -3,9 +3,11 @@ import datasets
 import tqdm
 import pandas as pd
 import re
+from typing import List, Dict, Union, Tuple
+from pathlib import Path
 
 # you can add more datasets here and write your own dataset parsing function
-DATASETS = ['TruthfulQA', 'SQuAD1', 'NarrativeQA']
+DATASETS = ['TruthfulQA_LLMs', 'SQuAD1_LMMs', 'NarrativeQA_LMMs', 'test_small']
 
 
 def process_spaces(text):
@@ -45,66 +47,11 @@ def process_text_truthfulqa_adv(text):
     return text
 
 
-def load_TruthfulQA(detectLLM):
-    f = pd.read_csv("datasets/TruthfulQA_LLMs.csv")
-    q = f['Question'].tolist()
-    a_human = f['Best Answer'].tolist()
-    a_chat = f[f'{detectLLM}_answer'].fillna("").tolist()
-    c = f['Category'].tolist()
-
-    res = []
-    for i in range(len(q)):
-        if len(a_human[i].split()) > 1 and len(a_chat[i].split()) > 1 and len(a_chat[i]) < 2000:
-            res.append([q[i], a_human[i], a_chat[i], c[i]])
-
-    data_new = {
-        'train': {
-            'text': [],
-            'label': [],
-            'category': [],
-        },
-        'test': {
-            'text': [],
-            'label': [],
-            'category': [],
-        }
-
-    }
-
-    index_list = list(range(len(res)))
-    random.seed(0)
-    random.shuffle(index_list)
-
-    total_num = len(res)
-    for i in tqdm.tqdm(range(total_num), desc="parsing data"):
-        if i < total_num * 0.8:
-            data_partition = 'train'
-        else:
-            data_partition = 'test'
-        data_new[data_partition]['text'].append(
-            process_spaces(res[index_list[i]][1]))
-        data_new[data_partition]['label'].append(0)
-        data_new[data_partition]['text'].append(
-            process_spaces(res[index_list[i]][2]))
-        data_new[data_partition]['label'].append(1)
-
-        data_new[data_partition]['category'].append(res[index_list[i]][3])
-        data_new[data_partition]['category'].append(res[index_list[i]][3])
-
-    return data_new
-
-
-def load_SQuAD1(detectLLM):
-    f = pd.read_csv("datasets/SQuAD1_LLMs.csv")
-    q = f['Question'].tolist()
-    a_human = [eval(_)['text'][0] for _ in f['answers'].tolist()]
-    a_chat = f[f'{detectLLM}_answer'].fillna("").tolist()
-
-    res = []
-    for i in range(len(q)):
-        if len(a_human[i].split()) > 1 and len(a_chat[i].split()) > 1:
-            res.append([q[i], a_human[i], a_chat[i]])
-
+def data_to_unified(human_texts: List[str], machine_texts: List[str]) \
+                -> Dict[str, Dict[str, Union[List[str], List[int]]]]:
+    
+    res = list(zip(human_texts, machine_texts))
+    
     data_new = {
         'train': {
             'text': [],
@@ -127,63 +74,67 @@ def load_SQuAD1(detectLLM):
             data_partition = 'train'
         else:
             data_partition = 'test'
-
         data_new[data_partition]['text'].append(
-            process_spaces(res[index_list[i]][1]))
+            process_spaces(res[index_list[i]][0]))
         data_new[data_partition]['label'].append(0)
         data_new[data_partition]['text'].append(
-            process_spaces(res[index_list[i]][2]))
+            process_spaces(res[index_list[i]][1]))
         data_new[data_partition]['label'].append(1)
+
     return data_new
 
 
-def load_NarrativeQA(detectLLM):
-    f = pd.read_csv("datasets/NarrativeQA_LLMs.csv")
-    q = f['Question'].tolist()
+def process_TruthfulQA(f: pd.DataFrame, detectLLM: str) -> Tuple[List[str], List[str]]:
+    # f = pd.read_csv("datasets/TruthfulQA_LLMs.csv")
+    a_human = f['Best Answer'].fillna("").where(1 < f['Best Answer']).tolist()
+    a_chat = f[f'{detectLLM}_answer'].fillna("").where(1 < len(f[f'{detectLLM}_answer'].split())).tolist()
+    return a_human, a_chat
+
+
+def process_SQuAD1(f: pd.DataFrame, detectLLM: str) -> Tuple[List[str], List[str]]:
+    # f = pd.read_csv("datasets/SQuAD1_LLMs.csv")
+    a_human = [eval(ans)['text'][0] for ans in f['answers'].tolist() if len(eval(ans)['text'][0].split()) > 1]
+    a_chat = f[f'{detectLLM}_answer'].fillna("").where(len(f[f'{detectLLM}_answer'].split()) > 1).tolist()
+    return a_human, a_chat
+
+
+def process_NarrativeQA(f: pd.DataFrame, detectLLM: str) -> Tuple[List[str], List[str]]:
+    # f = pd.read_csv("datasets/NarrativeQA_LLMs.csv")
     a_human = f['answers'].tolist()
-    a_human = [_.split(";")[0] for _ in a_human]
-    a_chat = f[f'{detectLLM}_answer'].fillna("").tolist()
+    a_human = [ans.split(";")[0] for ans in ['answers'].tolist() if 1 < len(ans.split(";")[0].split()) < 150]
+    a_chat = f[f'{detectLLM}_answer'].fillna("").where(1 < len(f[f'{detectLLM}_answer'].split()) < 150).tolist()
+    return a_human, a_chat
 
-    res = []
-    for i in range(len(q)):
-        if len(a_human[i].split()) > 1 and len(a_chat[i].split()) > 1 and len(a_human[i].split()) < 150 and len(a_chat[i].split()) < 150:
+def process_test_small(f: pd.DataFrame, **kwargs) -> Tuple[List[str], List[str]]:
+    human_texts = f[f.label == 0]["text"]
+    machine_texts = f[f.label == 1]["text"]
+    return human_texts, machine_texts
 
-            res.append([q[i], a_human[i], a_chat[i]])
+def read_file_to_pandas(filepath: str, filetype: str):
+    if filetype == "auto":
+        filetype = filepath.rsplit(".", 1)[-1]
+        print(filepath.rsplit(".", 1))
+    match filetype:
+        case "csv":
+            return pd.read_csv(filepath)
+        case "xls" | "xlsx":
+            return pd.read_excel(filepath)
+        case "json":
+            return pd.read_json(filepath)
+        case "xml":
+            return pd.read_xml(filepath)
+        case "huggingface":
+            return datasets.load_dataset(filepath).to_pandas()
+        case _:
+            raise ValueError(f'Unknown dataset file format: {filetype}')
 
-    data_new = {
-        'train': {
-            'text': [],
-            'label': [],
-        },
-        'test': {
-            'text': [],
-            'label': [],
-        }
-
-    }
-
-    index_list = list(range(len(res)))
-    random.seed(0)
-    random.shuffle(index_list)
-
-    total_num = len(res)
-    for i in tqdm.tqdm(range(total_num), desc="parsing data"):
-        if i < total_num * 0.8:
-            data_partition = 'train'
-        else:
-            data_partition = 'test'
-        data_new[data_partition]['text'].append(
-            process_spaces(res[index_list[i]][1]))
-        data_new[data_partition]['label'].append(0)
-        data_new[data_partition]['text'].append(
-            process_spaces(res[index_list[i]][2]))
-        data_new[data_partition]['label'].append(1)
-    return data_new
-
-
-def load(name, **kwargs):
+def load_from_file(filepath: str, filetype: str, **kwargs):
+    df = read_file_to_pandas(filepath, filetype)
+    name = Path(filepath).stem
+    
     if name in DATASETS:
-        load_fn = globals()[f'load_{name}']
-        return load_fn(**kwargs)
-    else:
-        raise ValueError(f'Unknown dataset {name}')
+        process_dataset = globals()[f'process_{name}']
+        human_texts, machine_texts = process_dataset(df, **kwargs)
+        return data_to_unified(human_texts, machine_texts)
+    
+    raise ValueError(f'Unknown dataset: {name}')
