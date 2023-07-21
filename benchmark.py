@@ -12,9 +12,14 @@ from pathlib import Path
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_filepath', type=str, default="datasets/TruthfulQA_LMMs.csv")
-    parser.add_argument('--dataset_filetype', type=str, default="auto", choices=["auto", "csv", "xls", "xlsx", "json", "xml", "huggingface"])
-    parser.add_argument('--detectLLM', type=str, default="ChatGPT")
+    
+    # dataset params
+    parser.add_argument('--dataset_filepaths', nargs='+', type=str, default="datasets/TruthfulQA_LMMs.csv")
+    parser.add_argument('--dataset_filetypes', nargs='+', type=str, default="auto", choices=["auto", "csv", "xls", "xlsx", "json", "xml", "huggingface"])
+    parser.add_argument('--dataset_processor', type=str, required=True)
+    # Use dataset_other to pass arbitrary text information from CLI to chosen dataset processor
+    parser.add_argument('--dataset_other', nargs="+", type=str, )
+    
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--base_model_name', type=str, default="gpt2-medium")
     parser.add_argument('--mask_filling_model_name',
@@ -50,12 +55,13 @@ if __name__ == '__main__':
     START_DATE = datetime.datetime.now().strftime('%Y-%m-%d')
     START_TIME = datetime.datetime.now().strftime('%H-%M-%S-%f')
 
-    print(f'Loading dataset {args.dataset_filepath}...')
-    data = dataset_loader.load_from_file(args.dataset_filepath, args.dataset_filetype, detectLLM=args.detectLLM)
+    print(f'Loading datasets {args.dataset_filepaths}...')
+    data = dataset_loader.load_from_file(args.dataset_filepaths, args.dataset_filetypes, 
+                                         args.dataset_processor, args.dataset_other)
     # data = filter_test_data(data, max_length=25)
 
     base_model_name = args.base_model_name.replace('/', '_')
-    SAVE_PATH = f"results/{base_model_name}-{args.mask_filling_model_name}/{Path(args.dataset_filepath).stem}"
+    SAVE_PATH = f"results/{base_model_name}-{args.mask_filling_model_name}/{args.dataset_processor}"
     if not os.path.exists(SAVE_PATH):
         os.makedirs(SAVE_PATH)
     print(f"Saving results to absolute path: {os.path.abspath(SAVE_PATH)}")
