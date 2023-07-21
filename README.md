@@ -59,3 +59,25 @@ journal = {{CoRR abs/2303.14822}},
 year = {2023}
 }
 ```
+
+# Integrated MGTBench Framework
+A framework, heavily based upon the original tool - [MGTBench: Benchmarking Machine-Generated Text Detection](https://arxiv.org/abs/2303.14822) - with additional funcionalities that make it easier to integrate custom datasets and custom detection methods
+
+## Support for custom dataset integration
+In the CLI you can select multiple dataset files (these have to be identified by a filepath) to be read from. In the CLI you also have to define a processor which will be a function that will process your selected dataset files into a unified data format.
+
+The processor is a function defined as follows:
+
+Name: process_PROCESSOR-NAME (Here, PROCESSOR-NAME will be the selected name of your processor. This would be usually the name of the dataset)
+Input: 2 arguments: list of pandas dataframes for each dataset file, list of strings corresponding to the --dataset_other command-line argument 
+Output: a tuple of 2 lists with human and machine texts correspondingely
+
+You will have to define this function in the dataset_loader.py file.
+
+Examples usage could be:
+
+python benchmark.py --dataset_filepaths datasets/human_texts.csv datasets/machine_texts.json --dataset_processor myAwesomeDataset
+## Support for custom MGTD method integration
+
+## Authors
+The framework was built upon the original MGTBench tool, designed and developed by Michal Spiegel (KINIT) under the supervision of Dominik Macko (KINIT)
