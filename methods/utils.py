@@ -68,6 +68,10 @@ def load_base_model_and_tokenizer(name, cache_dir):
     base_tokenizer = transformers.AutoTokenizer.from_pretrained(
         name, cache_dir=cache_dir)
     base_tokenizer.pad_token_id = base_tokenizer.eos_token_id
+    if base_tokenizer.pad_token is None:
+        base_tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        base_model.resize_token_embeddings(len(base_tokenizer))
+
 
     return base_model, base_tokenizer
 

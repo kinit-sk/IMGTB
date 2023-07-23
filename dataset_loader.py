@@ -7,10 +7,6 @@ from typing import List, Dict, Union, Tuple
 from pathlib import Path
 from itertools import zip_longest
 
-# you can add more datasets here and write your own dataset parsing function
-PROCESSORS = ['TruthfulQA_LLMs', 'SQuAD1_LMMs', 'NarrativeQA_LMMs', 'test_small']
-
-
 def process_spaces(text):
     return text.replace(
         ' ,', ',').replace(
@@ -98,7 +94,7 @@ def process_SQuAD1(data_list: List[pd.DataFrame], detectLLM: List[str]) -> Tuple
     detectLLM = detectLLM[0]
     a_human = [eval(ans)['text'][0] for ans in data['answers'].tolist() if len(eval(ans)['text'][0].split()) > 1]
     a_chat = data[f'{detectLLM}_answer'].fillna("").where(len(data[f'{detectLLM}_answer'].split()) > 1).tolist()
-    return a_human, a_chatf
+    return a_human, a_chat
 
 
 def process_NarrativeQA(data_list: List[pd.DataFrame], detectLLM: List[str]) -> Tuple[List[str], List[str]]:
@@ -117,7 +113,6 @@ def process_test_small(data_list: List[pd.DataFrame], *args) -> Tuple[List[str],
 
 def read_file_to_pandas(filepaths: List[str], filetypes: List[str]) -> List[pd.DataFrame]:
     dfs = []
-    
     for filepath, filetype in zip_longest(filepaths, filetypes):
         
         if filetype is None or filetype == "auto":
