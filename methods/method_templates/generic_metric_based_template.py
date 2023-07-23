@@ -1,4 +1,4 @@
-from abstract_methods.metric_based_experiment import MetricBasedExperiment
+from methods.abstract_methods.metric_based_experiment import MetricBasedExperiment
 
 class GenericMetricBasedTemplate(MetricBasedExperiment):
     def __init__(self, data, **kwargs): # Add new arguments, if needed, e.g. base model, DEVICE

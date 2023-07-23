@@ -1,4 +1,4 @@
-from abstract_methods.supervised_experiment import SupervisedExperiment
+from methods.abstract_methods.supervised_experiment import SupervisedExperiment
 
 class GenericSupervisedTemplate(SupervisedExperiment):
      def __init__(self, data, **kwargs): # Add extra parameters if needed
