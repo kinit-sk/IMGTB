@@ -26,7 +26,6 @@ def scan_for_detection_methods():
             if isclass(obj) and issubclass(obj, Experiment) and getmodule(obj) is module:
                 obj_list.append(obj)
             
-    print("Final:",obj_list[0].__class__.__name__)         
     return obj_list
 
 if __name__ == '__main__':
@@ -39,6 +38,8 @@ if __name__ == '__main__':
     # Use dataset_other to pass arbitrary text information from CLI to chosen dataset processor
     parser.add_argument('--dataset_other', nargs="+", type=str)
     
+    # List the methods you want to run
+    # (methods are named after names of their respective classes in the methods/implemented_methods directory)
     parser.add_argument('--methods', nargs='+', type=str, default=["all"])
     parser.add_argument('--detectLLM', type=str, default="ChatGPT")
     
@@ -116,7 +117,9 @@ if __name__ == '__main__':
                                        DEVICE=DEVICE, 
                                        detectLLM=args.detectLLM, 
                                        batch_size=batch_size,
-                                       cache_dir=cache_dir
+                                       cache_dir=cache_dir,
+                                       args=args,
+                                       gptzero_key=args.gptzero_key
                                        ).run(), filtered))
 
     # # run GPTZero: pleaze specify your gptzero_key in the args
