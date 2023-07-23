@@ -109,6 +109,7 @@ if __name__ == '__main__':
         args.base_model_name, cache_dir)
     load_base_model(base_model, DEVICE)
     
+    # Load experiments and evaluate them
     experiments = scan_for_detection_methods()
     filtered = filter(lambda exp: args.methods[0] == "all" or exp.__name__ in args.methods, experiments)
     outputs = list(map(lambda obj: obj(data=data, 

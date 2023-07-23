@@ -77,7 +77,37 @@ You will have to define this function in the dataset_loader.py file.
 Examples usage could be:
 
 python benchmark.py --dataset_filepaths datasets/human_texts.csv datasets/machine_texts.json --dataset_processor myAwesomeDataset
+
 ## Support for custom MGTD method integration
+
+To integrate a new method, you need to define new `Experiment` subclass in the `methods/implemented_methods directory`. The main script in `benchmark.py` will automatically detect (unless you choose otherwise by configuring the `--methods` option) your new method and evaluate it on your chosen dataset.
+
+### How to implement a new Experiment subclass
+
+To implement a new method, you can use one of the templates in the `methods/method_templates`. You will just have to fill in the not yet implemented methods and maybe tweak the `__init__()` constructor.
+
+### Experiment constructor parameters
+
+To correctly setup the input parameters in `__init__()` you will have to have a look at this line in `benchmark.py`:
+
+```python
+    outputs = list(map(lambda obj: obj(data=data, 
+                                       model=base_model, 
+                                       tokenizer=base_tokenizer, 
+                                       DEVICE=DEVICE, 
+                                       detectLLM=args.detectLLM, 
+                                       batch_size=batch_size,
+                                       cache_dir=cache_dir,
+                                       args=args,
+                                       gptzero_key=args.gptzero_key
+                                       ).run(), filtered))
+```
+
+Each `Experiment` object is initialized with these parameters. We only use keyword (named) parameters, keep that in mind while naming your parameters in the `__init__()` constructor. 
+Optionally, we use `**kwargs` int eh `__init__()` parameters to catch remaining (unused) parameters.
+
+#### Note:
+While developing your new method, you might find useful some of the functionality in `methods/utils.py`
 
 ## Authors
 The framework was built upon the original MGTBench tool, designed and developed by Michal Spiegel (KINIT) under the supervision of Dominik Macko (KINIT)
