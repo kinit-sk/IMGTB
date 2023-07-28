@@ -33,14 +33,19 @@ if __name__ == '__main__':
     
     # dataset params
     parser.add_argument('--dataset_filepaths', nargs='+', type=str, default=["datasets/TruthfulQA_LMMs.csv"])
-    parser.add_argument('--dataset_filetypes', nargs='+', type=str, default=["auto"], choices=["auto", "csv", "xls", "xlsx", "json", "xml", "huggingface"])
-    parser.add_argument('--dataset_processor', type=str, required=True)
+    parser.add_argument('--dataset_filetypes', nargs='+', type=str, default=["auto"], choices=["auto", "csv", "tsv", "zip", "gz", "xls", "xlsx", "json", "xml", "huggingfacehub"])
+    parser.add_argument('--dataset_processor', type=str, default="default")
+    parser.add_argument('--text_field', type=str, default="text")
+    parser.add_argument('--label_field', type=str, default="label")
+    parser.add_argument('--human_label', type=str, default="0")
+
     # Use dataset_other to pass arbitrary text information from CLI to chosen dataset processor
     parser.add_argument('--dataset_other', nargs="+", type=str)
     
     # List the methods you want to run
     # (methods are named after names of their respective classes in the methods/implemented_methods directory)
     parser.add_argument('--methods', nargs='+', type=str, default=["all"])
+    parser.add_argument('--list_methods', action="store_true")
     parser.add_argument('--detectLLM', type=str, default="ChatGPT")
     
     parser.add_argument('--batch_size', type=int, default=16)
@@ -79,8 +84,10 @@ if __name__ == '__main__':
     START_TIME = datetime.datetime.now().strftime('%H-%M-%S-%f')
 
     print(f'Loading datasets {args.dataset_filepaths}...')
-    data = dataset_loader.load_from_file(args.dataset_filepaths, args.dataset_filetypes, 
-                                         args.dataset_processor, args.dataset_other)
+    data = dataset_loader.load_from_file(filepaths=args.dataset_filepaths, filetypes=args.dataset_filetypes, 
+                                         processor=args.dataset_processor, text_field=args.text_field, 
+                                         label_field=args.label_field, human_label=args.human_label, 
+                                         other=args.dataset_other)
     # data = filter_test_data(data, max_length=25)
 
     base_model_name = args.base_model_name.replace('/', '_')
@@ -111,6 +118,12 @@ if __name__ == '__main__':
     
     # Load experiments and evaluate them
     experiments = scan_for_detection_methods()
+    if args.list_methods:
+        print("\nAvailable methods:\n")
+        for exp in experiments: print(exp.__name__)
+        print("\nFinish")
+        exit(0)
+        
     filtered = filter(lambda exp: args.methods[0] == "all" or exp.__name__ in args.methods, experiments)
     outputs = list(map(lambda obj: obj(data=data, 
                                        model=base_model, 
@@ -122,13 +135,6 @@ if __name__ == '__main__':
                                        args=args,
                                        gptzero_key=args.gptzero_key
                                        ).run(), filtered))
-
-    # # run GPTZero: pleaze specify your gptzero_key in the args
-    # outputs.append(run_gptzero_experiment(data, api_key=args.gptzero_key))
-
-    # run DetectGPT
-    #outputs.append(run_detectgpt_experiments(
-    #    args, data, base_model, base_tokenizer))
 
     # save results
     import pickle as pkl
