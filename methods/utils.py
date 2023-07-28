@@ -5,6 +5,7 @@ from sklearn.linear_model import LogisticRegression
 import time
 from functools import wraps
 import random
+import torch
 
 
 def timeit(func):
@@ -121,3 +122,39 @@ def get_clf_results(x_train, y_train, x_test, y_test):
     test_res = acc_test, precision_test, recall_test, f1_test, auc_test
 
     return train_res, test_res
+
+def get_ll(text, base_model, base_tokenizer, DEVICE):
+    with torch.no_grad():
+        tokenized = base_tokenizer(
+            text, padding=True, truncation=True, max_length=512, return_tensors="pt").to(DEVICE)
+        labels = tokenized.input_ids
+        return -base_model(**tokenized, labels=labels).loss.item()
+        # https://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py#L1317
+
+
+def get_lls(texts, base_model, base_tokenizer, DEVICE):
+    return [get_ll(_, base_model, base_tokenizer, DEVICE) for _ in texts]
+
+def get_rank(text, model, tokenizer, DEVICE, log=False):
+    with torch.no_grad():
+        tokenized = tokenizer(text, return_tensors="pt").to(DEVICE)
+        logits = model(**tokenized).logits[:, :-1]
+        labels = tokenized.input_ids[:, 1:]
+
+        # get rank of each label token in the model's likelihood ordering
+        matches = (logits.argsort(-1, descending=True)
+                == labels.unsqueeze(-1)).nonzero()
+        assert matches.shape[
+            1] == 3, f"Expected 3 dimensions in matches tensor, got {matches.shape}"
+
+        ranks, timesteps = matches[:, -1], matches[:, -2]
+
+        # make sure we got exactly one match for each timestep in the sequence
+        assert (timesteps == torch.arange(len(timesteps)).to(
+            timesteps.device)).all(), "Expected one match per timestep"
+
+        ranks = ranks.float() + 1  # convert to 1-indexed rank
+        if log:
+            ranks = torch.log(ranks)
+
+        return ranks.float().mean().item()
