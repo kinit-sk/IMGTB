@@ -45,8 +45,8 @@ class MetricBasedExperiment(Experiment):
         x_test = np.expand_dims(x_test, axis=-1)
         y_test = test_label
 
-        train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test)
-
+        train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test)
+        
         acc_train, precision_train, recall_train, f1_train, auc_train = train_res
         acc_test, precision_test, recall_test, f1_test, auc_test = test_res
 
@@ -55,17 +55,21 @@ class MetricBasedExperiment(Experiment):
 
         return {
             'name': f'{self.name}_threshold',
-            'predictions': {'train': train_criterion, 'test': test_criterion},
-            'general': {
-                'acc_train': acc_train,
-                'precision_train': precision_train,
-                'recall_train': recall_train,
-                'f1_train': f1_train,
-                'auc_train': auc_train,
-                'acc_test': acc_test,
-                'precision_test': precision_test,
-                'recall_test': recall_test,
-                'f1_test': f1_test,
-                'auc_test': auc_test,
+            'input_data': self.data,
+            'predictions': {'train': train_pred, 'test': test_pred},
+            'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
+            'metrics_results': {
+                'train': {
+                    'acc': acc_train,
+                    'precision': precision_train,
+                    'recall': recall_train,
+                    'f1': f1_train
+                },
+                'test': {
+                    'acc': acc_test,
+                    'precision': precision_test,
+                    'recall': recall_test,
+                    'f1': f1_test
+                }
             }
         }

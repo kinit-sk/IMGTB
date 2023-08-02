@@ -121,7 +121,7 @@ def get_clf_results(x_train, y_train, x_test, y_test):
         y_test, y_test_pred, y_test_pred_prob)
     test_res = acc_test, precision_test, recall_test, f1_test, auc_test
 
-    return train_res, test_res
+    return y_train_pred, y_test_pred, y_train_pred_prob, y_test_pred_prob, train_res, test_res
 
 def get_ll(text, base_model, base_tokenizer, DEVICE):
     with torch.no_grad():

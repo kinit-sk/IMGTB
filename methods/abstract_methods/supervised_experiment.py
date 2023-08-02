@@ -64,10 +64,6 @@ class SupervisedExperiment(Experiment):
             test_preds = get_supervised_model_prediction_multi_classes(
                 detector, tokenizer, test_text, self.batch_size, self.DEVICE, self.pos_bit)
 
-        predictions = {
-            'train': train_preds,
-            'test': test_preds,
-        }
         y_train_pred_prob = train_preds
         y_train_pred = [round(_) for _ in y_train_pred_prob]
         y_train = train_label
@@ -75,6 +71,16 @@ class SupervisedExperiment(Experiment):
         y_test_pred_prob = test_preds
         y_test_pred = [round(_) for _ in y_test_pred_prob]
         y_test = test_label
+
+        predictions = {
+            'train': y_train_pred,
+            'test': y_test_pred,
+        }
+        
+        machine_prob = {
+            'train': y_train_pred_prob,
+            'test': y_test_pred_prob
+        }
 
         train_res = cal_metrics(y_train, y_train_pred, y_train_pred_prob)
         test_res = cal_metrics(y_test, y_test_pred, y_test_pred_prob)
@@ -89,18 +95,22 @@ class SupervisedExperiment(Experiment):
 
         return {
             'name': self.model,
+            'input_data': self.data,
             'predictions': predictions,
-            'general': {
-                'acc_train': acc_train,
-                'precision_train': precision_train,
-                'recall_train': recall_train,
-                'f1_train': f1_train,
-                'auc_train': auc_train,
-                'acc_test': acc_test,
-                'precision_test': precision_test,
-                'recall_test': recall_test,
-                'f1_test': f1_test,
-                'auc_test': auc_test,
+            'machine_prob': machine_prob,
+            'metrics_results': {
+                'train': {
+                    'acc': acc_train,
+                    'precision': precision_train,
+                    'recall': recall_train,
+                    'f1': f1_train
+                },
+                'test': {
+                    'acc': acc_test,
+                    'precision': precision_test,
+                    'recall': recall_test,
+                    'f1': f1_test
+                }
             }
         }
 

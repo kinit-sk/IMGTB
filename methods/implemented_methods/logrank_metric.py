@@ -3,7 +3,7 @@ from methods.utils import get_rank
 import torch
 
 
-class RankMetric(MetricBasedExperiment):
+class LogRankMetric(MetricBasedExperiment):
     def __init__(self, data, model, tokenizer, DEVICE, **kwargs): # Add new arguments, if needed, e.g. base model, DEVICE
         super().__init__(data, self.__class__.__name__)
         self.model = model

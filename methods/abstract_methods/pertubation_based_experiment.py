@@ -63,7 +63,7 @@ class PertubationBasedExperiment(Experiment):
 
         res = self.evaluate_perturbation_results(self.args, perturbation_results, perturbation_mode,
                                         span_length=self.args.span_length, n_perturbations=n_perturbations)
-        print("DetectGPT took %.4f sec" % (time.time() - t1))
+        print(f'{self.name} took %.4f sec' % (time.time() - t1))
         return res
     
      def get_perturbation_results(self, args, data, mask_model, mask_tokenizer, base_model, base_tokenizer, span_length=10, n_perturbations=1):
