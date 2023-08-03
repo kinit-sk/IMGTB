@@ -8,6 +8,7 @@ from pathlib import Path
 from itertools import zip_longest
 from sklearn.model_selection import train_test_split
 
+
 def process_spaces(text):
     return text.replace(
         ' ,', ',').replace(
@@ -56,16 +57,21 @@ def data_to_unified(human_texts: pd.Series, machine_texts: pd.Series) \
 
     return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
 
-def process_default(data: Dict[str, pd.DataFrame], text_field, label_field, human_label, **kwargs):
+def process_default(data: Dict[str, pd.DataFrame], text_field, label_field, human_label, **kwargs) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
     if text_field not in data.columns or label_field not in data.columns:
         raise ValueError("Could not parse dataset. Please, correctly specify dataset specifications or define your own custom function for parsing.")
     human_texts = data[text_field].where(data[label_field].astype("string") == human_label).dropna().reset_index(drop=True)
     machine_texts = data[text_field].where(data[label_field].astype("string") != human_label).dropna().reset_index(drop=True)
     return human_texts, machine_texts
+
+def process_test_small_dir(data: Dict[str, pd.DataFrame], **kwargs):
+    human = data["human"]["human"]
+    machine = data["machine"]["machine"]
+    return human, machine
     
 
-def process_TruthfulQA(data: Dict[str, pd.DataFrame], other: List[str]) -> Tuple[List[str], List[str]]:
+def process_TruthfulQA(data: Dict[str, pd.DataFrame], other: List[str], **kwargs) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
     detectLLM = other[0]
     a_human = data['Best Answer'].fillna("").where(1 < data['Best Answer']).tolist()
@@ -73,15 +79,15 @@ def process_TruthfulQA(data: Dict[str, pd.DataFrame], other: List[str]) -> Tuple
     return a_human, a_chat
 
 
-def process_SQuAD1(data_list: Dict[str, pd.DataFrame], other: List[str]) -> Tuple[List[str], List[str]]:
+def process_SQuAD1(data: Dict[str, pd.DataFrame], other: List[str], **kwargs) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
     detectLLM = other[0]
     a_human = [eval(ans)['text'][0] for ans in data['answers'].tolist() if len(eval(ans)['text'][0].split()) > 1]
-    a_chat = data[f'{detectLLM}_answer'].fillna("").where(len(data[f'{detectLLM}_answer'].split()) > 1).tolist()
-    return a_human, a_chat
+    a_chat = data[f'{detectLLM}_answer'].fillna("").where(data[f'{detectLLM}_answer'].str.split().apply(len) > 1)
+    return pd.Series(a_human).head(100), a_chat.head(100)
 
 
-def process_NarrativeQA(data_list: Dict[str, pd.DataFrame], other: List[str]) -> Tuple[List[str], List[str]]:
+def process_NarrativeQA(data: Dict[str, pd.DataFrame], other: List[str], **kwargs) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
     detectLLM = other[0]
     a_human = data['answers'].tolist()
@@ -89,49 +95,73 @@ def process_NarrativeQA(data_list: Dict[str, pd.DataFrame], other: List[str]) ->
     a_chat = data[f'{detectLLM}_answer'].fillna("").where(1 < len(data[f'{detectLLM}_answer'].split()) < 150).tolist()
     return a_human, a_chat
 
-def process_test_small(data_list: Dict[str, pd.DataFrame], **kwargs) -> Tuple[List[str], List[str]]:
+def process_test_small(data: Dict[str, pd.DataFrame], **kwargs) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
     human_texts = data[data.label == 0]["text"]
     machine_texts = data[data.label == 1]["text"]
-    return human_texts, machine_texts
+    return human_texts, machine_texts                       
 
-def read_file_to_pandas(filepaths: List[str], filetypes: List[str]) -> List[pd.DataFrame]:
+def load_multiple_from_file(filepaths: List[str], processors: List[str], **kwargs):
+    unified_data_dict = dict()
+    dataset_dict = read_multiple_to_pandas(filepaths)
+    for dataset, processor in zip_longest(dataset_dict.items(), processors):
+        dataset_name, file_dict = dataset
+        if processor is None: processor = "default"
+        dataset_processor = globals().get(f'process_{processor}')
+        if processor is not None:
+            human_texts, machine_texts = dataset_processor(file_dict, **kwargs)
+            unified_data_dict[dataset_name] = data_to_unified(human_texts, machine_texts)
+        else:
+            raise ValueError(f'Unknown dataset processor: {processor}')
+    
+    return unified_data_dict
+
+def read_multiple_to_pandas(filepaths: List[str]) -> List[pd.DataFrame]:
+    datasets = dict()
+    for filepath in filepaths:
+        filetype = "auto"
+        read_dataset_to_pandas = read_dir_to_pandas if Path(filepath).is_dir() else read_file_to_pandas
+        while (df_dict := read_dataset_to_pandas(filepath, filetype)) is None:
+            filetype = input(f'Unknown dataset file format for: {filepath}. Please, input the correct file format manually.\n'
+                              'Options: auto, csv, tsv, xls, xlsx, json, jsonl, xml, huggingfacehub\n')
+        datasets[Path(filepath).stem] = df_dict
+    
+    return datasets
+
+def read_dir_to_pandas(filepath: str, *args):
     data = dict()
-    for filepath, filetype in zip_longest(filepaths, filetypes):
-        
-        if filetype is None or filetype == "auto":
-            # Try to detect by suffix
-            filetype = filepath.rsplit(".", 1)[-1]
-
-        match filetype:
-            case "csv":
-                data[Path(filepath).stem] = pd.read_csv(filepath)            
-            case "tsv":
-                data[Path(filepath).stem] = pd.read_csv(filepath, sep='\t')
-            case "xls" | "xlsx":
-                data[Path(filepath).stem] = pd.read_excel(filepath)
-            case "json":
-                data[Path(filepath).stem] = pd.read_json(filepath)
-            case "jsonl":
-                data[Path(filepath).stem] = pd.read_json(filepath, lines=True)
-            case "xml":
-                data[Path(filepath).stem] = pd.read_xml(filepath)
-            case "huggingfacehub":
-                data[Path(filepath).stem] = datasets.load_dataset(filepath).to_pandas()
-            case "zip" | "gz":
-                raise ValueError(f'Please, specify a file format'
-                                 '(with the "--dataset_filetypes" option)'
-                                 'for the compressed file: {filepath}')
-            case _:
-                raise ValueError(f'Unknown dataset file format: {filetype}')
+    pathlist = Path(filepath).iterdir()
+    for path in pathlist:
+        filetype = "auto"
+        while (df_dict := read_file_to_pandas(str(path), filetype)) is None:
+            filetype = input(f'Unknown dataset file format for: {filepath}. Please, input the correct file format manually.\n'
+                              'Options: auto, csv, tsv, xls, xlsx, json, jsonl, xml, huggingfacehub\n')
+        data.update(df_dict)
     
     return data
-
-def load_from_file(filepaths: List[str], filetypes: List[str], processor: str, **kwargs):
-    data = read_file_to_pandas(filepaths, filetypes)
-    dataset_processor = globals().get(f'process_{processor}')
-    if dataset_processor is not None:
-        human_texts, machine_texts = dataset_processor(data, **kwargs)
-        return data_to_unified(human_texts, machine_texts)
     
-    raise ValueError(f'Unknown dataset processor: {processor}')
+
+def read_file_to_pandas(filepath: str, filetype="auto"):
+    data = dict()
+    if filetype == "auto":
+        filetype = filepath.rsplit(".", 1)[-1]
+        
+    match filetype:
+        case "csv":
+            data[Path(filepath).stem] = pd.read_csv(filepath)            
+        case "tsv":
+            data[Path(filepath).stem] = pd.read_csv(filepath, sep='\t')
+        case "xls" | "xlsx":
+            data[Path(filepath).stem] = pd.read_excel(filepath)
+        case "json":
+            data[Path(filepath).stem] = pd.read_json(filepath)
+        case "jsonl":
+            data[Path(filepath).stem] = pd.read_json(filepath, lines=True)
+        case "xml":
+            data[Path(filepath).stem] = pd.read_xml(filepath)
+        case "huggingfacehub":
+            data[Path(filepath).stem] = datasets.load_dataset(filepath).to_pandas()
+        case _:
+            return None
+    
+    return data 

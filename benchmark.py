@@ -6,35 +6,80 @@ import json
 from pathlib import Path
 from inspect import getmembers, getmodule, isclass
 import importlib.util
+import pickle as pkl
+
 import dataset_loader
 from methods.utils import load_base_model, load_base_model_and_tokenizer, filter_test_data
 from methods.abstract_methods.experiment import Experiment
+from results_analysis import run_full_analysis
 
+CURR_DATETIME = datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
 METHODS_DIRECTORY = "methods/implemented_methods"
+RESULTS_PATH = "results"
+LOG_PATH = os.path.join(RESULTS_PATH, "logs", CURR_DATETIME)
+LOG_METHOD_W_DATASET_PATH = os.path.join(RESULTS_PATH, "methods")
+
 
 def scan_for_detection_methods():
-    obj_list = []
+    exp_class_list = []
 
     for file in os.scandir(METHODS_DIRECTORY):
         if not file.is_file() or not file.path.endswith(".py"):
             continue
+        
+        # Import the file to make its members accessible.
         spec = importlib.util.spec_from_file_location(file.name, file.path)
         module = importlib.util.module_from_spec(spec)
         sys.modules[file.name] = module
         spec.loader.exec_module(module)
+        
+        # Find all subclasses of Experiment.
         for _, obj in getmembers(module):
             if isclass(obj) and issubclass(obj, Experiment) and getmodule(obj) is module:
-                obj_list.append(obj)
+                exp_class_list.append(obj)
+
+    return exp_class_list
+
+def log_whole_experiment(args, outputs):
+    """Log all experiment data as a whole by current time"""
+        
+    print(f"Saving results to absolute path: {os.path.abspath(LOG_PATH)}")
+    print(LOG_PATH)
+    if not os.path.exists(LOG_PATH):
+        os.makedirs(LOG_PATH)
+    
+    # Write args to file.
+    with open(os.path.join(LOG_PATH, "args.json"), "w") as file:
+        json.dump(args.__dict__, file, indent=4)
+        
+    # Save outputs.
+    with open(os.path.join(LOG_PATH, f"benchmark_results.pkl"), "wb") as file:
+        pkl.dump(outputs, file)
+
+def save_method_dataset_combination_results(args, outputs):
+    """Log results for all method and dataset combinations separately"""
+
+    for dataset_name, results_list in outputs.items():
+        for method_data in results_list:
+            method_name = method_data["name"]
+            SAVE_PATH =  os.path.join(LOG_METHOD_W_DATASET_PATH, method_name, dataset_name)
+            print(f"Saving results from {method_name}" 
+                   f" on {dataset_name} dataset to absolute path: {os.path.abspath(SAVE_PATH)}")
+            if not os.path.exists(SAVE_PATH):
+                os.makedirs(SAVE_PATH)
+            data = {"args": args.__dict__, "data": method_data}
+            # Save args and outputs for given method and dataset.
+            with open(os.path.join(SAVE_PATH, f"{CURR_DATETIME}_experiment_results.pkl"), "wb") as file:
+                pkl.dump(outputs, file)
             
-    return obj_list
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     
     # dataset params
     parser.add_argument('--dataset_filepaths', nargs='+', type=str, default=["datasets/TruthfulQA_LMMs.csv"])
-    parser.add_argument('--dataset_filetypes', nargs='+', type=str, default=["auto"], choices=["auto", "csv", "tsv", "zip", "gz", "xls", "xlsx", "json", "xml", "huggingfacehub"])
-    parser.add_argument('--dataset_processor', type=str, default="default")
+    parser.add_argument('--dataset_processors', nargs='+', type=str, default=["default"])
     parser.add_argument('--text_field', type=str, default="text")
     parser.add_argument('--label_field', type=str, default="label")
     parser.add_argument('--human_label', type=str, default="0")
@@ -75,6 +120,10 @@ if __name__ == '__main__':
 
     # params for GPTZero
     parser.add_argument('--gptzero_key', type=str, default="")
+    
+    # results analysis params
+    parser.add_argument('--list_analysis_methods', action='store_true')
+    parser.add_argument('--analysis_methods', type=str, nargs='+', default=["all"])
 
     args = parser.parse_args()
 
@@ -82,23 +131,12 @@ if __name__ == '__main__':
 
     START_DATE = datetime.datetime.now().strftime('%Y-%m-%d')
     START_TIME = datetime.datetime.now().strftime('%H-%M-%S-%f')
-
+    
     print(f'Loading datasets {args.dataset_filepaths}...')
-    data = dataset_loader.load_from_file(filepaths=args.dataset_filepaths, filetypes=args.dataset_filetypes, 
-                                         processor=args.dataset_processor, text_field=args.text_field, 
-                                         label_field=args.label_field, human_label=args.human_label, 
-                                         other=args.dataset_other)
+    dataset_dict = dataset_loader.load_multiple_from_file(filepaths=args.dataset_filepaths, processors=args.dataset_processors, 
+                                                          text_field=args.text_field, label_field=args.label_field, 
+                                                          human_label=args.human_label, other=args.dataset_other)
     # data = filter_test_data(data, max_length=25)
-
-    base_model_name = args.base_model_name.replace('/', '_')
-    SAVE_PATH = f"results/{base_model_name}-{args.mask_filling_model_name}/{args.dataset_processor}"
-    if not os.path.exists(SAVE_PATH):
-        os.makedirs(SAVE_PATH)
-    print(f"Saving results to absolute path: {os.path.abspath(SAVE_PATH)}")
-
-    # write args to file
-    with open(os.path.join(SAVE_PATH, "args.json"), "w") as f:
-        json.dump(args.__dict__, f, indent=4)
 
     mask_filling_model_name = args.mask_filling_model_name
     batch_size = args.batch_size
@@ -123,27 +161,27 @@ if __name__ == '__main__':
         for exp in experiments: print(exp.__name__)
         print("\nFinish")
         exit(0)
-        
-    filtered = filter(lambda exp: args.methods[0] == "all" or exp.__name__ in args.methods, experiments)
-    outputs = list(map(lambda obj: obj(data=data, 
-                                       model=base_model, 
-                                       tokenizer=base_tokenizer, 
-                                       DEVICE=DEVICE, 
-                                       detectLLM=args.detectLLM, 
-                                       batch_size=batch_size,
-                                       cache_dir=cache_dir,
-                                       args=args,
-                                       gptzero_key=args.gptzero_key
-                                       ).run(), filtered))
+    
+    outputs = dict()
+    for dataset_name, data in dataset_dict.items():
+        print(f"Running experiments on {dataset_name} dataset:")    
+        filtered = filter(lambda exp: args.methods[0] == "all" or exp.__name__ in args.methods, experiments)
+        outputs[dataset_name] = list(map(lambda obj: obj(data=data, 
+                                            model=base_model, 
+                                            tokenizer=base_tokenizer, 
+                                            DEVICE=DEVICE, 
+                                            detectLLM=args.detectLLM, 
+                                            batch_size=batch_size,
+                                            cache_dir=cache_dir,
+                                            args=args,
+                                            gptzero_key=args.gptzero_key
+                                            ).run(), filtered))
 
-    # save results
-    import pickle as pkl
-    with open(os.path.join(SAVE_PATH, f"benchmark_results.pkl"), "wb") as f:
-        pkl.dump(outputs, f)
-
-    with open("logs/performance.csv", "a") as wf:
-        for row in outputs:
-            wf.write(f"{args.dataset_processor},{args.detectLLM},{args.base_model_name},{row['name']},{json.dumps(row['general'])}\n")
-
+    log_whole_experiment(args, outputs)    
+    save_method_dataset_combination_results(args, outputs)
+    
+    print("\nRunning analysis:")
+    run_full_analysis(outputs, save_path=LOG_PATH)
+    
     print("Finish")
     
