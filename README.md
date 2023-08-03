@@ -64,7 +64,8 @@ year = {2023}
 A framework, heavily based upon the original tool - [MGTBench: Benchmarking Machine-Generated Text Detection](https://arxiv.org/abs/2303.14822) - with additional funcionalities that make it easier to integrate custom datasets and custom detection methods
 
 ## Support for custom dataset integration
-In the CLI you can select multiple dataset files (these have to be identified by a filepath) to be read from. In the CLI you also have to define a processor which will be a function that will process your selected dataset files into a unified data format.
+In the CLI you will have to define a path to your dataset file (or a folder, if your dataset is constructed from multiple files). You can define multiple datasets, that way your chosen MGTD methods will be evaluated against multiple datasets. 
+In the CLI you also have to define a processor which will be a function that will process your selected dataset files into a unified data format. Unless you leave it on default, which takes your input dataset (that should constitute of a single file) and parses it using '--text_field' and '--label_field' (user-specified or the default) CLI arguments.
 
 The processor is a function defined as follows:
 
@@ -105,6 +106,14 @@ To correctly setup the input parameters in `__init__()` you will have to have a 
 
 Each `Experiment` object is initialized with these parameters. We only use keyword (named) parameters, keep that in mind while naming your parameters in the `__init__()` constructor. 
 Optionally, we use `**kwargs` int eh `__init__()` parameters to catch remaining (unused) parameters.
+
+#### Experiment output format
+Each experiment run should return a dictionary with results with at least the following items:
+- name - name of the experiment
+- input_data - the data, texts, labels that the method was trained/evaluated on, usually split into train and test sections
+- predictions - predicted labels
+- machine_prob - predicted probability that a given text is machine-generated
+- metrics_results - evaluation of different classification metrics (e.g. Accuracy, Precision, F1...), usually split into train and test sections
 
 #### Note:
 While developing your new method, you might find useful some of the functionality in `methods/utils.py`
