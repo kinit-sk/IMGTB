@@ -1,6 +1,7 @@
 from methods.abstract_methods.metric_based_experiment import MetricBasedExperiment
 import torch
 import torch.nn.functional as F
+from methods.utils import get_entropy
 
 
 class EntropyMetric(MetricBasedExperiment):
@@ -11,8 +12,4 @@ class EntropyMetric(MetricBasedExperiment):
         self.DEVICE = DEVICE
     
     def criterion_fn(self, text: str):
-        with torch.no_grad():
-            tokenized = self.tokenizer(text, return_tensors="pt").to(self.DEVICE)
-            logits = self.model(**tokenized).logits[:, :-1]
-            neg_entropy = F.softmax(logits, dim=-1) * F.log_softmax(logits, dim=-1)
-            return -neg_entropy.sum(-1).mean().item()
+        return get_entropy(text, self.model, self.tokenizer, self.DEVICE)

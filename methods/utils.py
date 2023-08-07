@@ -6,6 +6,8 @@ import time
 from functools import wraps
 import random
 import torch
+import torch.nn.functional as F
+
 
 
 def timeit(func):
@@ -158,3 +160,10 @@ def get_rank(text, model, tokenizer, DEVICE, log=False):
             ranks = torch.log(ranks)
 
         return ranks.float().mean().item()
+
+def get_entropy(text, model, tokenizer, DEVICE):
+    with torch.no_grad():
+        tokenized = tokenizer(text, return_tensors="pt").to(DEVICE)
+        logits = model(**tokenized).logits[:, :-1]
+        neg_entropy = F.softmax(logits, dim=-1) * F.log_softmax(logits, dim=-1)
+        return -neg_entropy.sum(-1).mean().item()
