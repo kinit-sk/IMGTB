@@ -2,8 +2,8 @@ from methods.abstract_methods.metric_based_experiment import MetricBasedExperime
 from methods.utils import get_ll, get_rank
 
 class DetectLLM_LLR(MetricBasedExperiment):
-    def __init__(self, data, model, tokenizer, args, **kwargs):
-        super().__init__(data, self.__class__.__name__) # Set your own name or leave it set to the class name
+    def __init__(self, data, model, tokenizer, args, clf_algo_for_threshold, **kwargs):
+        super().__init__(data, self.__class__.__name__, clf_algo_for_threshold) # Set your own name or leave it set to the class name
         self.model = model
         self.tokenizer = tokenizer
         self.args = args

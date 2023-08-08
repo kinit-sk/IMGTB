@@ -75,8 +75,8 @@ def process_TruthfulQA(data: Dict[str, pd.DataFrame], other: List[str], **kwargs
     data = list(data.values())[0]
     detectLLM = other[0]
     a_human = data['Best Answer'].fillna("").where(1 < data['Best Answer']).tolist()
-    a_chat = data[f'{detectLLM}_answer'].fillna("").where(1 < len(data[f'{detectLLM}_answer'].split())).tolist()
-    return a_human, a_chat
+    a_chat = data[f'{detectLLM}_answer'].fillna("").where(1 < data[f'{detectLLM}_answer'].str.split().apply(len)).tolist()
+    return pd.Series(a_human), pd.Series(a_chat)
 
 
 def process_SQuAD1(data: Dict[str, pd.DataFrame], other: List[str], **kwargs) -> Tuple[pd.Series, pd.Series]:
@@ -84,16 +84,15 @@ def process_SQuAD1(data: Dict[str, pd.DataFrame], other: List[str], **kwargs) ->
     detectLLM = other[0]
     a_human = [eval(ans)['text'][0] for ans in data['answers'].tolist() if len(eval(ans)['text'][0].split()) > 1]
     a_chat = data[f'{detectLLM}_answer'].fillna("").where(data[f'{detectLLM}_answer'].str.split().apply(len) > 1)
-    return pd.Series(a_human).head(100), a_chat.head(100)
+    return pd.Series(a_human), a_chat
 
 
 def process_NarrativeQA(data: Dict[str, pd.DataFrame], other: List[str], **kwargs) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
     detectLLM = other[0]
-    a_human = data['answers'].tolist()
-    a_human = [ans.split(";")[0] for ans in ['answers'].tolist() if 1 < len(ans.split(";")[0].split()) < 150]
-    a_chat = data[f'{detectLLM}_answer'].fillna("").where(1 < len(data[f'{detectLLM}_answer'].split()) < 150).tolist()
-    return a_human, a_chat
+    a_human = [ans.split(";")[0] for ans in data['answers'].tolist() if 1 < len(ans.split(";")[0].split()) < 150]
+    a_chat = data[f'{detectLLM}_answer'].fillna("").where((1 < data[f'{detectLLM}_answer'].str.split().apply(len)) & (data[f'{detectLLM}_answer'].str.split().apply(len) < 150))
+    return pd.Series(a_human).astype(str), pd.Series(a_chat).astype(str)
 
 def process_test_small(data: Dict[str, pd.DataFrame], **kwargs) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]

@@ -2,13 +2,26 @@ import transformers
 import re
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.neural_network import MLPClassifier
 import time
 from functools import wraps
 import random
 import torch
 import torch.nn.functional as F
 
-
+CLF_MODELS = {
+    "LogisticRegression": LogisticRegression(random_state=0),
+    "KNeighborsClassifier": KNeighborsClassifier(),
+    "SVC": SVC(random_state=0, probability=True),
+    "DecisionTreeClassifier": DecisionTreeClassifier(random_state=0),
+    "RandomForestClassifier": RandomForestClassifier(random_state=0),
+    "MLPClassifier": MLPClassifier(random_state=0),
+    "AdaBoostClassifier": AdaBoostClassifier(random_state=0)
+}
 
 def timeit(func):
     @wraps(func)
@@ -105,9 +118,14 @@ def cal_metrics(label, pred_label, pred_posteriors):
     return acc, precision, recall, f1, auc
 
 
-def get_clf_results(x_train, y_train, x_test, y_test):
+def get_clf_results(x_train, y_train, x_test, y_test, clf_model_name="LogisticRegression"):
 
-    clf = LogisticRegression(random_state=0).fit(x_train, y_train)
+    if CLF_MODELS.get(clf_model_name) is None:
+        raise ValueError(f"Unsupported classification algorithm for threshold computation selected: {clf_model_name}")
+    
+    clf_model = CLF_MODELS[clf_model_name]
+    
+    clf = clf_model.fit(x_train, y_train)
 
     y_train_pred = clf.predict(x_train)
     y_train_pred_prob = clf.predict_proba(x_train)

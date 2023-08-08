@@ -90,6 +90,7 @@ class DetectLLM_NPR(PertubationBasedExperiment):
 
         return {
             'name': name,
+            'input_data': self.data,
             'predictions': {'train': train_pred, 'test': test_pred},
             'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
             'metrics_results': {
@@ -106,7 +107,7 @@ class DetectLLM_NPR(PertubationBasedExperiment):
                     'f1': f1_test
                 }
             },
-            'info': {
+            'perturbations_info': {
                 'pct_words_masked': args.pct_words_masked,
                 'span_length': span_length,
                 'n_perturbations': n_perturbations,

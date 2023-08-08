@@ -5,7 +5,7 @@ import numpy as np
 
 
 class GLTRMetric(MetricBasedExperiment):
-    def __init__(self, data, model, tokenizer, DEVICE, **kwargs): # Add new arguments, if needed, e.g. base model, DEVICE
+    def __init__(self, data, model, tokenizer, DEVICE, clf_algo_for_threshold, **kwargs): # Add new arguments, if needed, e.g. base model, DEVICE
         super().__init__(data, self.__class__.__name__)
         self.model = model
         self.tokenizer = tokenizer
@@ -64,7 +64,7 @@ class GLTRMetric(MetricBasedExperiment):
         x_test = np.array(test_criterion)
         y_test = test_label
 
-        train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test)
+        train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test, self.clf_algo_for_threshold)
 
         acc_train, precision_train, recall_train, f1_train, auc_train = train_res
         acc_test, precision_test, recall_test, f1_test, auc_test = test_res

@@ -83,6 +83,7 @@ if __name__ == '__main__':
     parser.add_argument('--text_field', type=str, default="text")
     parser.add_argument('--label_field', type=str, default="label")
     parser.add_argument('--human_label', type=str, default="0")
+    parser.add_argument('--detectLLM', type=str, default="ChatGPT")
 
     # Use dataset_other to pass arbitrary text information from CLI to chosen dataset processor
     parser.add_argument('--dataset_other', nargs="+", type=str)
@@ -91,7 +92,15 @@ if __name__ == '__main__':
     # (methods are named after names of their respective classes in the methods/implemented_methods directory)
     parser.add_argument('--methods', nargs='+', type=str, default=["all"])
     parser.add_argument('--list_methods', action="store_true")
-    parser.add_argument('--detectLLM', type=str, default="ChatGPT")
+    # Select an algorithm that will be used for threshold computation (for metric-based methods)
+    # (You can define your own in methods/utils.py source file by creating a new item in the CLF_MODELS dictionary)
+    parser.add_argument('--clf_algo_for_threshold', type=str, default="LogisticRegression", choices=["LogisticRegression", 
+                                                                                                     "KNeighborsClassifier", 
+                                                                                                     "SVC", 
+                                                                                                     "DecisionTreeClassifier", 
+                                                                                                     "RandomForestClassifier", 
+                                                                                                     "MLPClassifier", 
+                                                                                                     "AdaBoostClassifier"])
     
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--base_model_name', type=str, default="gpt2-medium")
@@ -174,7 +183,8 @@ if __name__ == '__main__':
                                             batch_size=batch_size,
                                             cache_dir=cache_dir,
                                             args=args,
-                                            gptzero_key=args.gptzero_key
+                                            gptzero_key=args.gptzero_key,
+                                            clf_algo_for_threshold=args.clf_algo_for_threshold
                                             ).run(), filtered))
 
     log_whole_experiment(args, outputs)    

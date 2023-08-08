@@ -164,7 +164,7 @@ cython_debug/
 *.pkl
 *.ipynb
 *.txt
-# datasets/*
+datasets/*
 
 *.csv
 adv_attack.py

@@ -4,8 +4,8 @@ import torch
 
 
 class LogRankMetric(MetricBasedExperiment):
-    def __init__(self, data, model, tokenizer, DEVICE, **kwargs): # Add new arguments, if needed, e.g. base model, DEVICE
-        super().__init__(data, self.__class__.__name__)
+    def __init__(self, data, model, tokenizer, DEVICE, clf_algo_for_threshold, **kwargs): # Add new arguments, if needed, e.g. base model, DEVICE
+        super().__init__(data, self.__class__.__name__, clf_algo_for_threshold)
         self.model = model
         self.tokenizer = tokenizer
         self.DEVICE = DEVICE
