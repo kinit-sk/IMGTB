@@ -1,11 +1,12 @@
 import pandas as pd
-import glob
-import shutil
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report
 import seaborn as sns
 from math import ceil, sqrt
 import os
+import traceback
+import sys
+import json
 
 
 def analyze_test_metrics(results_list, save_path):
@@ -93,8 +94,21 @@ sns.set()
 
 def run_full_analysis(results, save_path):
   for fn in FULL_ANALYSIS:
-    fn(results, save_path)
+    try:
+      fn(results, save_path)
+    except Exception:
+      print(f"Analysis with the function {fn.__name__} failed due to below reasons. Skipping and continuing with the next function.")
+      print(traceback.format_exc())
     
 
-def run_full_analysis_from_file(filepath: str):
-    pass
+def run_full_analysis_from_file(filepath: str, save_path: str):
+  with open(filepath, "r") as file:
+    results = json.load(file, parse_float=True)
+    run_full_analysis(results, save_path)
+    
+
+if __name__ == '__main__':
+  if sys.argv != 3:
+    print("Please, specify file to run the analysis on and a save path to store analysis results. Aborting...")
+    exit(1)
+  run_full_analysis_from_file(sys.args[1], sys.args[2])
