@@ -9,10 +9,8 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.metrics import F1Score, Accuracy, Precision, Recall, AUC
 from tensorflow.keras.losses import BinaryCrossentropy
-from sklearn.model_selection import train_test_split
-from methods.utils import timeit, get_clf_results
 from methods.abstract_methods.experiment import Experiment
-from methods.utils import get_rank, get_ll, get_entropy, cal_metrics
+from methods.utils import get_rank, get_ll, get_entropy, cal_metrics, timeit, get_clf_results
 
 class MetricBasedMashup(Experiment):
     

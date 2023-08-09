@@ -54,11 +54,11 @@ class MetricBasedExperiment(Experiment):
 
         print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
         print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
-
+        
         return {
             'name': f'{self.name}_threshold',
             'input_data': self.data,
-            'predictions': {'train': train_pred, 'test': test_pred},
+            'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
             'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
             'metrics_results': {
                 'train': {

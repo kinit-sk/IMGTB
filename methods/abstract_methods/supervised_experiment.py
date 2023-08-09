@@ -72,16 +72,6 @@ class SupervisedExperiment(Experiment):
         y_test_pred = [round(_) for _ in y_test_pred_prob]
         y_test = test_label
 
-        predictions = {
-            'train': y_train_pred,
-            'test': y_test_pred,
-        }
-        
-        machine_prob = {
-            'train': y_train_pred_prob,
-            'test': y_test_pred_prob
-        }
-
         train_res = cal_metrics(y_train, y_train_pred, y_train_pred_prob)
         test_res = cal_metrics(y_test, y_test_pred, y_test_pred_prob)
         acc_train, precision_train, recall_train, f1_train, auc_train = train_res
@@ -96,8 +86,8 @@ class SupervisedExperiment(Experiment):
         return {
             'name': self.model,
             'input_data': self.data,
-            'predictions': predictions,
-            'machine_prob': machine_prob,
+            'predictions': {'train': y_train_pred,'test': y_test_pred},
+            'machine_prob': {'train': y_train_pred_prob, 'test': y_test_pred_prob},
             'metrics_results': {
                 'train': {
                     'acc': acc_train,

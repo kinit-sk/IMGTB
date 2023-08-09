@@ -78,7 +78,6 @@ def filter_test_data(data, max_length=25):
 
 def load_base_model_and_tokenizer(name, cache_dir):
 
-    print(f'Loading BASE model {name}...')
     base_model = transformers.AutoModelForCausalLM.from_pretrained(
         name, cache_dir=cache_dir)
     base_tokenizer = transformers.AutoTokenizer.from_pretrained(

@@ -6,7 +6,7 @@ import numpy as np
 
 class GLTRMetric(MetricBasedExperiment):
     def __init__(self, data, model, tokenizer, DEVICE, clf_algo_for_threshold, **kwargs): # Add new arguments, if needed, e.g. base model, DEVICE
-        super().__init__(data, self.__class__.__name__)
+        super().__init__(data, self.__class__.__name__, clf_algo_for_threshold)
         self.model = model
         self.tokenizer = tokenizer
         self.DEVICE = DEVICE
@@ -64,7 +64,7 @@ class GLTRMetric(MetricBasedExperiment):
         x_test = np.array(test_criterion)
         y_test = test_label
 
-        train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test, self.clf_algo_for_threshold)
+        train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test, self.clf_algo_for_threshold)
 
         acc_train, precision_train, recall_train, f1_train, auc_train = train_res
         acc_test, precision_test, recall_test, f1_test, auc_test = test_res
@@ -74,18 +74,21 @@ class GLTRMetric(MetricBasedExperiment):
 
         return {
             'name': f'{self.name}_threshold',
-            'predictions': {'train': train_criterion, 'test': test_criterion},
-            'general': {
-                'acc_train': acc_train,
-                'precision_train': precision_train,
-                'recall_train': recall_train,
-                'f1_train': f1_train,
-                'auc_train': auc_train,
-                'acc_test': acc_test,
-                'precision_test': precision_test,
-                'recall_test': recall_test,
-                'f1_test': f1_test,
-                'auc_test': auc_test,
+            'input_data': self.data,
+            'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
+            'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
+            'metrics_results': {
+                'train': {
+                    'acc': acc_train,
+                    'precision': precision_train,
+                    'recall': recall_train,
+                    'f1': f1_train
+                },
+                'test': {
+                    'acc': acc_test,
+                    'precision': precision_test,
+                    'recall': recall_test,
+                    'f1': f1_test
+                }
             }
         }
-

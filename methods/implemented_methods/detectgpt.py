@@ -90,7 +90,7 @@ class DetectGPT(PertubationBasedExperiment):
         return {
             'name': name,
             'input_data': self.data,
-            'predictions': {'train': train_pred, 'test': test_pred},
+            'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
             'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
             'metrics_results': {
                 'train': {

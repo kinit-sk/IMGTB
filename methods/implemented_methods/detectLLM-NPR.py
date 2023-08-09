@@ -1,11 +1,8 @@
 from methods.abstract_methods.pertubation_based_experiment import PertubationBasedExperiment
 import numpy as np
 import transformers
-import re
 import torch
 import torch.nn.functional as F
-import random
-import time
 from tqdm import tqdm
 from methods.utils import get_clf_results, get_rank
 
@@ -91,7 +88,7 @@ class DetectLLM_NPR(PertubationBasedExperiment):
         return {
             'name': name,
             'input_data': self.data,
-            'predictions': {'train': train_pred, 'test': test_pred},
+            'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
             'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
             'metrics_results': {
                 'train': {
