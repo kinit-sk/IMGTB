@@ -7,7 +7,6 @@ from pathlib import Path
 from inspect import getmembers, getmodule, isclass
 import importlib.util
 import traceback
-from huggingface_hub import HfApi, list_models, ModelFilter
 
 from lib.dataset_loader import load_multiple_from_file
 from lib.config import get_config
@@ -34,6 +33,7 @@ def main():
         exit(0)
     
     if config.name is not None:
+        global LOG_PATH
         LOG_PATH = os.path.join(RESULTS_PATH, "logs", config.name)
     
     print_w_sep_line(f'Loading datasets {config.dataset_filepath}...')
@@ -44,13 +44,12 @@ def main():
     print_w_sep_line("Running benchmark...")
     benchmark_results = run_benchmark(dataset_dict, config)
 
-
     print_w_sep_line("Saving experiment results\n")
     log_whole_experiment(config, benchmark_results)    
     save_method_dataset_combination_results(config, benchmark_results)
     
     print_w_sep_line("Running analysis:\n")
-    run_full_analysis(benchmark_results, save_path=LOG_PATH)
+    run_full_analysis(benchmark_results, LOG_PATH, config.interactive)
     
     print_w_sep_line("Finish")
                    

@@ -9,7 +9,7 @@ import sys
 import json
 
 
-def analyze_test_metrics(results_list, save_path):
+def analyze_test_metrics(results_list, save_path, is_interactive: bool):
   for dataset_name, dataset_results in results_list.items():
     results = pd.Series()
     for detector in dataset_results:
@@ -52,11 +52,12 @@ def analyze_test_metrics(results_list, save_path):
                       hspace=0.8)
   
     plt.savefig(os.path.join(save_path, f"{dataset_name}_metrics_analysis.png"))
-    plt.show()
+    if is_interactive:
+      plt.show()
 
 
 
-def analyze_text_lengths(results_list, save_path):
+def analyze_text_lengths(results_list, save_path, is_interactive: bool):
   for dataset_name, dataset_results in results_list.items():
     lengths_groups = [[0, 50], [50, 100], [100, 200], [200, 500], [500, 100000]]
     results = pd.DataFrame()
@@ -86,16 +87,17 @@ def analyze_text_lengths(results_list, save_path):
     ax.set(ylim=(0, 1), xlabel="Length group (word count)")
       
     plt.savefig(os.path.join(save_path, f'{dataset_name}_text_lengths_analysis.png'))
-    plt.show()
+    if is_interactive:
+      plt.show()
 
 
 FULL_ANALYSIS=[analyze_test_metrics, analyze_text_lengths]
 sns.set() 
 
-def run_full_analysis(results, save_path):
+def run_full_analysis(results, save_path, is_interactive: bool):
   for fn in FULL_ANALYSIS:
     try:
-      fn(results, save_path)
+      fn(results, save_path, is_interactive)
     except Exception:
       print(f"Analysis with the function {fn.__name__} failed due to below reasons. Skipping and continuing with the next function.")
       print(traceback.format_exc())
