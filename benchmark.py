@@ -7,11 +7,12 @@ from pathlib import Path
 from inspect import getmembers, getmodule, isclass
 import importlib.util
 import traceback
+from huggingface_hub import HfApi, list_models, ModelFilter
 
 from lib.dataset_loader import load_multiple_from_file
 from lib.config import get_config
-from methods.utils import move_model_to_device, load_base_model_and_tokenizer, filter_test_data
 from methods.abstract_methods.experiment import Experiment
+from methods.abstract_methods.supervised_experiment import SupervisedExperiment
 from results_analysis import run_full_analysis
 
 
@@ -23,56 +24,73 @@ LOG_METHOD_W_DATASET_PATH = os.path.join(RESULTS_PATH, "methods")
 
 
 def main():
-    
-    START_DATE = datetime.datetime.now().strftime('%Y-%m-%d')
-    START_TIME = datetime.datetime.now().strftime('%H-%M-%S-%f')
-    
-    params = get_config()
+    config = get_config()
 
-    if params.list_methods:
+    if config.list_methods:
         experiments = scan_for_detection_methods()
         print_w_sep_line("Locally available methods:\n")
         for exp in experiments: print(exp.__name__)
         print_w_sep_line("Finish")
         exit(0)
     
-    print_w_sep_line(f'Loading datasets {params.dataset_filepath}...')
-    dataset_dict = load_multiple_from_file(filepaths=params.dataset_filepath, processors=params.dataset_processor, 
-                                                          text_field=params.text_field, label_field=params.label_field, 
-                                                          human_label=params.human_label, other=params.dataset_other)
-
-    cache_dir = params.cache_dir
-    if not os.path.exists(cache_dir):
-        os.makedirs(cache_dir)
-    print_w_sep_line(f"Using cache dir {cache_dir}")
+    if config.name is not None:
+        LOG_PATH = os.path.join(RESULTS_PATH, "logs", config.name)
     
-    experiments = scan_for_detection_methods()    
+    print_w_sep_line(f'Loading datasets {config.dataset_filepath}...')
+    dataset_dict = load_multiple_from_file(filepaths=config.dataset_filepath, processors=config.dataset_processor, 
+                                                          text_field=config.text_field, label_field=config.label_field, 
+                                                          human_label=config.human_label, other=config.dataset_other)
+
+    print_w_sep_line("Running benchmark...")
+    benchmark_results = run_benchmark(dataset_dict, config)
+
+
+    print_w_sep_line("Saving experiment results\n")
+    log_whole_experiment(config, benchmark_results)    
+    save_method_dataset_combination_results(config, benchmark_results)
+    
+    print_w_sep_line("Running analysis:\n")
+    run_full_analysis(benchmark_results, save_path=LOG_PATH)
+    
+    print_w_sep_line("Finish")
+                   
+def run_benchmark(dataset_dict, config):
+    
+    if not os.path.exists(config.cache_dir):
+        os.makedirs(config.cache_dir)
+    print_w_sep_line(f"Using cache dir {config.cache_dir}")
+    
+    available_experiments = scan_for_detection_methods()    
     outputs = dict()
+    
     for dataset_name, data in dataset_dict.items():
         print_w_sep_line(f"Running experiments on {dataset_name} dataset:\n")    
-        filtered = filter(lambda exp: params.methods[0] == "all" or exp.__name__ in params.methods, experiments)
         outputs[dataset_name] = []
-        for experiment in filtered:
+        for method in config.methods:
             try: 
-                results = experiment(data=data, 
-                                        config=params,
-                                        ).run()
+                results = run_experiment(data, config, method, available_experiments)
             except Exception:
-                print(f"Experiment {experiment.__name__} failed due to below reasons. Skipping and continuing with the next experiment.")
+                print(f"Experiment {method} failed due to below reasons. Skipping and continuing with the next experiment.")
                 print(traceback.format_exc())
                 continue
             
             outputs[dataset_name].append(results)
+    
+    return outputs
 
-    print_w_sep_line("Saving experiment results\n")
-    log_whole_experiment(params, outputs)    
-    save_method_dataset_combination_results(params, outputs)
+def run_experiment(data, config, method, available_experiments):
     
-    print_w_sep_line("Running analysis:\n")
-    run_full_analysis(outputs, save_path=LOG_PATH)
+    available_exp_names = list(map(lambda x: x.__name__, available_experiments))
+    if method in available_exp_names:
+        return available_experiments[available_exp_names.index(method)](data=data, config=config).run()
     
-    print_w_sep_line("Finish")
-                   
+    try: # Check if method is model name from HuggingFace Hub for sequence classification
+        return SupervisedExperiment(data, method, method, config).run()
+    except:
+        pass
+    
+    raise ValueError(f"Unknown method: {method}")
+    
 
 def scan_for_detection_methods():
     exp_class_list = []
