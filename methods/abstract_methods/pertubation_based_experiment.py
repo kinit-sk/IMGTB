@@ -7,24 +7,32 @@ import torch.nn.functional as F
 import random
 import time
 from tqdm import tqdm
-from methods.utils import get_clf_results
+from methods.utils import load_base_model_and_tokenizer, move_model_to_device
 
 FILL_DICTIONARY = set()
 
 class PertubationBasedExperiment(Experiment):
-     def __init__(self, data, model, tokenizer, args, **kwargs): # Add extra parameters if needed
+     def __init__(self, data, config): # Add extra parameters if needed
         name = self.__class__.__name__ # Set your own name or leave it set to the class name
         super().__init__(data, name)
-        self.base_model = model
-        self.base_tokenizer = tokenizer
-        self.args = args
+        self.base_model_name = config.base_model_name
+        self.cache_dir = config.cache_dir
+        self.DEVICE = config.DEVICE
+        self.config = config
+        self.base_model = None
+        self.base_tokenizer = None
      
      def run(self):
-        mask_filling_model_name = self.args.mask_filling_model_name
-        cache_dir = self.args.cache_dir
+        print(f"Loading BASE model {self.base_model_name}\n")
+        self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
+            self.base_model_name, self.cache_dir)
+        move_model_to_device(self.base_model, self.DEVICE) 
+        
+        mask_filling_model_name = self.config.mask_filling_model_name
+        cache_dir = self.config.cache_dir
 
         # get mask filling model (for DetectGPT only)
-        if self.args.random_fills:
+        if self.config.random_fills:
             FILL_DICTIONARY = set()
             for texts in self.data['train']['text'] + self.data['test']['text']:
                 for text in texts:
@@ -33,16 +41,16 @@ class PertubationBasedExperiment(Experiment):
 
         int8_kwargs = {}
         half_kwargs = {}
-        if self.args.int8:
+        if self.config.int8:
             int8_kwargs = dict(load_in_8bit=True,
                             device_map='auto', torch_dtype=torch.bfloat16)
-        elif self.args.half:
+        elif self.config.half:
             half_kwargs = dict(torch_dtype=torch.bfloat16)
         print(f'Loading mask filling model {mask_filling_model_name}...')
         mask_model = transformers.AutoModelForSeq2SeqLM.from_pretrained(
             mask_filling_model_name, **int8_kwargs, **half_kwargs, cache_dir=cache_dir)
 
-        if not self.args.random_fills:
+        if not self.config.random_fills:
             try:
                 n_positions = mask_model.config.n_positions
             except AttributeError:
@@ -59,10 +67,10 @@ class PertubationBasedExperiment(Experiment):
         t1 = time.time()
 
         perturbation_results = self.get_perturbation_results(
-            self.args, self.data, mask_model, mask_tokenizer, self.base_model, self.base_tokenizer, self.args.span_length, n_perturbations)
+            self.config, self.data, mask_model, mask_tokenizer, self.base_model, self.base_tokenizer, self.config.span_length, n_perturbations)
 
-        res = self.evaluate_perturbation_results(self.args, perturbation_results, perturbation_mode,
-                                        span_length=self.args.span_length, n_perturbations=n_perturbations)
+        res = self.evaluate_perturbation_results(self.config, perturbation_results, perturbation_mode,
+                                        span_length=self.config.span_length, n_perturbations=n_perturbations)
         print(f'{self.name} took %.4f sec' % (time.time() - t1))
         return res
     

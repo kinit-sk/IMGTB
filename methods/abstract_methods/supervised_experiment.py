@@ -23,12 +23,12 @@ class CustomDataset(torch.utils.data.Dataset):
 
 class SupervisedExperiment(Experiment):
 
-    def __init__(self, data, name, model: str, cache_dir: str, batch_size: int, DEVICE: str, pos_bit=0, finetune=False, num_labels=2, epochs=3):
+    def __init__(self, data, name, model: str, config, pos_bit=0, finetune=False, num_labels=2, epochs=3):
         super().__init__(data, name)
         self.model = model
-        self.cache_dir = cache_dir
-        self.batch_size = batch_size
-        self.DEVICE = DEVICE
+        self.cache_dir = config.cache_dir
+        self.batch_size = config.batch_size
+        self.DEVICE = config.DEVICE
         self.pos_bit = pos_bit
         self.finetune = finetune
         self.num_labels = num_labels

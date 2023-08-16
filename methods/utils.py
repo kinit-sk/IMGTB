@@ -91,8 +91,8 @@ def load_base_model_and_tokenizer(name, cache_dir):
     return base_model, base_tokenizer
 
 
-def load_base_model(base_model, DEVICE):
-    print('MOVING BASE MODEL TO GPU...', end='', flush=True)
+def move_model_to_device(base_model, DEVICE):
+    print(f'MOVING BASE MODEL TO {DEVICE}...', end='', flush=True)
     start = time.time()
 
     base_model.to(DEVICE)

@@ -1,20 +1,19 @@
 from methods.abstract_methods.metric_based_experiment import MetricBasedExperiment
-from methods.utils import timeit, get_clf_results
+from methods.utils import timeit, get_clf_results, load_base_model_and_tokenizer, move_model_to_device
 import torch
 import numpy as np
 
 
 class GLTRMetric(MetricBasedExperiment):
-    def __init__(self, data, model, tokenizer, DEVICE, clf_algo_for_threshold, **kwargs): # Add new arguments, if needed, e.g. base model, DEVICE
-        super().__init__(data, self.__class__.__name__, clf_algo_for_threshold)
-        self.model = model
-        self.tokenizer = tokenizer
-        self.DEVICE = DEVICE
+    def __init__(self, data, config):
+        super().__init__(data, self.__class__.__name__, config)
+        self.base_model_name = config.base_model_name
+        self.clf_algo_for_threshold = config.clf_algo_for_threshold
     
     def criterion_fn(self, text: str):
         with torch.no_grad():
-            tokenized = self.tokenizer(text, return_tensors="pt").to(self.DEVICE)
-            logits = self.model(**tokenized).logits[:, :-1]
+            tokenized = self.base_tokenizer(text, return_tensors="pt").to(self.DEVICE)
+            logits = self.base_model(**tokenized).logits[:, :-1]
             labels = tokenized.input_ids[:, 1:]
 
             # get rank of each label token in the model's likelihood ordering
@@ -47,6 +46,12 @@ class GLTRMetric(MetricBasedExperiment):
     
     @timeit
     def run(self):
+        
+        print(f"Loading BASE model {self.base_model_name}\n")
+        self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
+            self.base_model_name, self.cache_dir)
+        move_model_to_device(self.base_model, self.DEVICE)
+        
         torch.manual_seed(0)
         np.random.seed(0)
 

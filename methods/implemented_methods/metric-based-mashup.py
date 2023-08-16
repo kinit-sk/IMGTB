@@ -10,25 +10,33 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.metrics import F1Score, Accuracy, Precision, Recall, AUC
 from tensorflow.keras.losses import BinaryCrossentropy
 from methods.abstract_methods.experiment import Experiment
-from methods.utils import get_rank, get_ll, get_entropy, cal_metrics, timeit, get_clf_results
+from methods.utils import get_rank, get_ll, get_entropy, cal_metrics, timeit, load_base_model_and_tokenizer, move_model_to_device
 
 class MetricBasedMashup(Experiment):
     
-    def __init__(self, data, model, tokenizer, DEVICE, **kwargs):
+    def __init__(self, data, config):
         name = __class__.__name__
         super().__init__(data, name)
-        self.model = model
-        self.tokenizer = tokenizer
-        self.DEVICE = DEVICE
+        self.DEVICE = config.DEVICE
+        self.cache_dir = config.cache_dir
+        self.base_model_name = config.base_model_name
+        self.base_model = None
+        self.base_tokenizer = None
     
     def criterion_fn(self, text: str):
-        return np.array([get_rank(text, self.model, self.tokenizer, self.DEVICE),
-                get_rank(text, self.model, self.tokenizer, self.DEVICE, log=True),
-                get_ll(text, self.model, self.tokenizer, self.DEVICE),
-                get_entropy(text, self.model, self.tokenizer, self.DEVICE)])
+        return np.array([get_rank(text, self.base_model, self.base_tokenizer, self.DEVICE),
+                get_rank(text, self.base_model, self.base_tokenizer, self.DEVICE, log=True),
+                get_ll(text, self.base_model, self.base_tokenizer, self.DEVICE),
+                get_entropy(text, self.base_model, self.base_tokenizer, self.DEVICE)])
 
     @timeit
     def run(self):
+        
+        print(f"Loading BASE model {self.base_model_name}\n")
+        self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
+            self.base_model_name, self.cache_dir)
+        move_model_to_device(self.base_model, self.DEVICE)
+        
         torch.manual_seed(0)
         np.random.seed(0)
 
@@ -64,12 +72,11 @@ class MetricBasedMashup(Experiment):
 
         print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
         print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
-
         return {
             'name': f'{self.name}',
             'input_data': self.data,
-            'predictions': {'train': train_pred, 'test': test_pred},
-            'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
+            'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
+            'machine_prob': {'train': train_pred_prob.tolist(), 'test': test_pred_prob.tolist()},
             'metrics_results': {
                 'train': {
                     'acc': acc_train,

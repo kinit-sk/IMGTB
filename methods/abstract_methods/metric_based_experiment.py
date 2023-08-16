@@ -1,16 +1,22 @@
 from tqdm import tqdm
 import numpy as np
+import os
 import torch
 import torch.nn.functional as F
 import time
-from methods.utils import timeit, get_clf_results
+from methods.utils import timeit, get_clf_results, load_base_model_and_tokenizer, move_model_to_device
 from methods.abstract_methods.experiment import Experiment
 
 class MetricBasedExperiment(Experiment):
     
-    def __init__(self, data, name, clf_algo_for_threshold):
+    def __init__(self, data, name, config):
         super().__init__(data, name)
-        self.clf_algorithm_name = clf_algo_for_threshold
+        self.clf_algorithm_name = config.clf_algo_for_threshold
+        self.cache_dir = config.cache_dir
+        self.base_model_name = config.base_model_name
+        self.DEVICE = config.DEVICE
+        self.base_model = None
+        self.base_tokenizer = None
     
     def criterion_fn(self, text: str):
         """
@@ -26,6 +32,12 @@ class MetricBasedExperiment(Experiment):
 
     @timeit
     def run(self):
+
+        print(f"Loading BASE model {self.base_model_name}\n")
+        self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
+            self.base_model_name, self.cache_dir)
+        move_model_to_device(self.base_model, self.DEVICE)
+            
         torch.manual_seed(0)
         np.random.seed(0)
 

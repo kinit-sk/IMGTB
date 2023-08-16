@@ -1,8 +1,8 @@
 from methods.abstract_methods.experiment import Experiment
 
 class GenericPlainTemplate(Experiment):
-     def __init__(self, data, **kwargs): # Add extra parameters if needed
-        name = self.__class__.__name__ # Set your own name or leave it set to the class name
+     def __init__(self, data, config):
+        name = self.__class__.__name__
         super().__init__(data, name)
         
      def run(self):
@@ -10,7 +10,7 @@ class GenericPlainTemplate(Experiment):
         Run the experiment on the provided data, evaluate and return results similar to:
         return {
             'name': name,
-            'input_data': data,
+            'input_data': data, 
             'predictions': {'train': train_pred, 'test': test_pred},
             'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
             'metrics_results': {

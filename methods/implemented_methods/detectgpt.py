@@ -11,8 +11,8 @@ from methods.utils import get_clf_results, get_ll, get_lls
 
 class DetectGPT(PertubationBasedExperiment):
     
-    def __init__(self, data, model, tokenizer, args, **kwargs):
-        super().__init__(data, model, tokenizer, args, **kwargs)
+    def __init__(self, data, config):
+        super().__init__(data, config)
 
     def compute_perturbation_results(self, train, test, base_model, base_tokenizer, args):
         
