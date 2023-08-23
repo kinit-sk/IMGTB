@@ -46,23 +46,32 @@ conda activate IntegratedMGTBenchFramework;
 To run the benchmark on the SQuAD1 dataset: 
 ```python
 # Distinguish Human vs. ChatGPT - by default runs all methods:
-python benchmark.py --dataset_filepaths datasets/SQuAD1_LLMs.csv --dataset_processor SQuAD1 --detectLLM ChatGPT
+python benchmark.py --dataset datasets/SQuAD1_LLMs.csv auto SQuAD1 text label 0 ChatGPT
 
 # Run only selected methods
-python benchmark.py --dataset_filepaths datasets/SQuAD1_LLMs.csv --dataset_processor SQuAD1 --detectLLM --methods
-```
+python benchmark.py --dataset datasets/SQuAD1_LLMs.csv auto SQuAD1 text label 0 ChatGPT --methods RankMetric EntropyMetric
+```s
 
 ## **Support for custom dataset integration**
-### **Dataset filepaths**
+### **Dataset parameters**
 In the CLI you will have to define a path to your dataset file (or a folder, if your dataset is constructed from multiple files).
 
-You can define multiple datasets, that way your chosen MGTD methods will be evaluated against multiple datasets. 
+You can define multiple datasets, that way your chosen MGTD methods will be evaluated against multiple datasets. To define more than one dataset use the `--dataset` option for each dataset. E.g.:
+```bash
+python benchmark.py --dataset datasets/test_dataset.csv --dataset datasets/test_dataset2.csv
+```
+The general dataset definition or usage of the `--dataset` option would be:
+```bash
+--dataset FILEPATH FILETYPE PROCESSOR TEXT_FIELD LABEL_FIELD HUMAN_LABEL OTHER
+```
+Only required parameter is the dataset filepath, other parameters will be filled in with their default values, if left empty.
+
 
 ### **Dataset processors**
 In the CLI you also have to define a processor which will be a function that will process your selected dataset files into a unified data format. Unless you leave it on default, which takes your input dataset (that should constitute of a single file) and parses it using '--text_field' and '--label_field' (user-specified or the default) CLI arguments.
 
 ### **Processor definition**
-A processor is a function defined in the `datset_loader.py` source file as follows:
+A processor is a function defined in the `dataset_loader.py` source file as follows:
 
 **Name:** process_PROCESSOR-NAME (Here, PROCESSOR-NAME will be the selected name of your processor. This would be usually the name of the dataset)
 
@@ -73,7 +82,9 @@ A processor is a function defined in the `datset_loader.py` source file as follo
 **Examples usage could be:**
 
 ```bash
-python benchmark.py --dataset_filepaths datasets/test_dataset.csv --dataset_processor myAwesomeDatasetProcessor
+python benchmark.py --dataset datasets/test_dataset.csv
+python benchmark.py --dataset datasets/test_dataset.csv csv myAwesomeTestProcessor
+python benchmark.py --dataset datasets/test_dataset.csv csv myAwesomeTestProcessor ThisIsTextFieldName ThisIsLabelFieldName Human OtherTextDataToBePassedToProcessor
 ```
 
 This will tie to the `process_myAwesomeDatasetProcessor()` function (it must be implemented beforehand) that will be given the raw content of `datasets/test_dataset.csv`.

@@ -24,7 +24,7 @@ LOG_METHOD_W_DATASET_PATH = os.path.join(RESULTS_PATH, "methods")
 
 def main():
     config = get_config()
-
+s
     if config.list_methods:
         experiments = scan_for_detection_methods()
         print_w_sep_line("Locally available methods:\n")
@@ -36,10 +36,8 @@ def main():
         global LOG_PATH
         LOG_PATH = os.path.join(RESULTS_PATH, "logs", config.name)
     
-    print_w_sep_line(f'Loading datasets {config.dataset_filepath}...')
-    dataset_dict = load_multiple_from_file(filepaths=config.dataset_filepath, processors=config.dataset_processor, 
-                                                          text_field=config.text_field, label_field=config.label_field, 
-                                                          human_label=config.human_label, other=config.dataset_other)
+    print_w_sep_line(f'Loading datasets {config.dataset}...')
+    dataset_dict = load_multiple_from_file(datasets_params=config.dataset, is_interactive=config.interactive)
 
     print_w_sep_line("Running benchmark...")
     benchmark_results = run_benchmark(dataset_dict, config)
