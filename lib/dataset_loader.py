@@ -47,8 +47,11 @@ def read_multiple_to_pandas(dataset_params, is_interactive: bool) -> Dict[str, p
     for filepath, filetype, *_ in dataset_params:
         read_dataset_to_pandas = read_dir_to_pandas if Path(filepath).is_dir() else read_file_to_pandas
         while (df_dict := read_dataset_to_pandas(filepath, filetype, is_interactive)) is None:
-            filetype = input(f'Unknown dataset file format for: {filepath}. Please, input the correct file format manually.\n'
-                              f'Options: {", ".join(SUPPORTED_FILETYPES)}\n')
+            if is_interactive:
+                filetype = input(f'Unknown dataset file format for: {filepath}. Please, input the correct file format manually.\n'
+                                f'Options: {", ".join(SUPPORTED_FILETYPES)}\n')
+                continue
+            raise ValueError(f'Unknown dataset file format for: {filepath}')
         datasets[Path(filepath).stem] = df_dict
     
     return datasets
@@ -58,8 +61,11 @@ def read_dir_to_pandas(filepath: str, filetype: str, is_interactive: bool):
     pathlist = Path(filepath).iterdir()
     for path in pathlist:
         while (df_dict := read_file_to_pandas(str(path), filetype)) is None:
-            filetype = input(f'Unknown dataset file format for: {filepath}. Please, input the correct file format manually.\n'
-                              f'Options: {", ".join(SUPPORTED_FILETYPES)}\n')
+            if is_interactive:
+                filetype = input(f'Unknown dataset file format for: {filepath}. Please, input the correct file format manually.\n'
+                                f'Options: {", ".join(SUPPORTED_FILETYPES)}\n')
+                continue
+            raise ValueError(f'Unknown dataset file format for: {filepath}')
         data.update(df_dict)
     
     return data
