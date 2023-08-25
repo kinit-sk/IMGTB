@@ -16,11 +16,13 @@ data:
 methods:
   global:
     base_model_name: prajjwal1/bert-tiny
-    mask_filling_model_name: google/t5-efficient-tiny-el6
+    mask_filling_model_name: google/t5-efficient-tiny
     DEVICE: cpu
     cache_dir: .cache
   list:
-  - name: all
+  - name: EntropyMetric
+  - name: RankMetric
+    mask_filling_model_name: google/t5-efficient-tiny-el6
 
 analysis:
   - name: analyze_test_metrics

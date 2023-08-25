@@ -62,7 +62,7 @@ def main():
     save_method_dataset_combination_results(config["methods"]["list"], benchmark_results)
     
     print_w_sep_line("Running analysis:\n")
-    run_full_analysis(benchmark_results, LOG_PATH, config["global"]["interactive"])
+    run_full_analysis(benchmark_results, config["analysis"], LOG_PATH, config["global"]["interactive"])
     
     print_w_sep_line("Finish")
                    
