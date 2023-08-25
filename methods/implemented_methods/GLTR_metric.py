@@ -7,8 +7,8 @@ import numpy as np
 class GLTRMetric(MetricBasedExperiment):
     def __init__(self, data, config):
         super().__init__(data, self.__class__.__name__, config)
-        self.base_model_name = config.base_model_name
-        self.clf_algo_for_threshold = config.clf_algo_for_threshold
+        self.base_model_name = config["base_model_name"]
+        self.clf_algo_for_threshold = config["clf_algo_for_threshold"]
     
     def criterion_fn(self, text: str):
         with torch.no_grad():

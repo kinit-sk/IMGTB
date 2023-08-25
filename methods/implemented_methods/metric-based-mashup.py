@@ -17,9 +17,9 @@ class MetricBasedMashup(Experiment):
     def __init__(self, data, config):
         name = __class__.__name__
         super().__init__(data, name)
-        self.DEVICE = config.DEVICE
-        self.cache_dir = config.cache_dir
-        self.base_model_name = config.base_model_name
+        self.DEVICE = config["DEVICE"]
+        self.cache_dir = config["cache_dir"]
+        self.base_model_name = config["base_model_name"]
         self.base_model = None
         self.base_tokenizer = None
     

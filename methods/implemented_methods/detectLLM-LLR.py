@@ -7,6 +7,6 @@ class DetectLLM_LLR(MetricBasedExperiment):
         self.config = config
     
     def criterion_fn(self, text: str):
-       return get_ll(text, self.base_model, self.base_tokenizer, self.config.DEVICE) \
-              / get_rank(text, self.base_model, self.base_tokenizer, self.config.DEVICE, log=True)
+       return get_ll(text, self.base_model, self.base_tokenizer, self.config["DEVICE"]) \
+              / get_rank(text, self.base_model, self.base_tokenizer, self.config["DEVICE"], log=True)
 

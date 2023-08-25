@@ -11,10 +11,10 @@ class MetricBasedExperiment(Experiment):
     
     def __init__(self, data, name, config):
         super().__init__(data, name)
-        self.clf_algorithm_name = config.clf_algo_for_threshold
-        self.cache_dir = config.cache_dir
-        self.base_model_name = config.base_model_name
-        self.DEVICE = config.DEVICE
+        self.clf_algorithm_name = config["clf_algo_for_threshold"]
+        self.cache_dir = config["cache_dir"]
+        self.base_model_name = config["base_model_name"]
+        self.DEVICE = config["DEVICE"]
         self.base_model = None
         self.base_tokenizer = None
     
@@ -33,6 +33,10 @@ class MetricBasedExperiment(Experiment):
     @timeit
     def run(self):
 
+        if not os.path.exists(self.cache_dir):
+            os.makedirs(self.cache_dir)
+        print(f"Using cache dir {self.cache_dir}")
+        
         print(f"Loading BASE model {self.base_model_name}\n")
         self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
             self.base_model_name, self.cache_dir)

@@ -1,0 +1,29 @@
+---
+global:
+  interactive: false
+  name: null
+
+data:
+  list:
+  - filepath: datasets/test_small.csv
+    filetype: auto
+    processor: default
+    text_field: text
+    label_field: label
+    human_label: "0"
+    dataset_other: null
+
+methods:
+  global:
+    base_model_name: prajjwal1/bert-tiny
+    mask_filling_model_name: google/t5-efficient-tiny-el6
+    DEVICE: cpu
+    cache_dir: .cache
+  list:
+  - name: all
+
+analysis:
+  - name: analyze_test_metrics
+  - name: analyze_text_lengths
+  
+...

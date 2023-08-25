@@ -18,18 +18,18 @@ class DetectGPT(PertubationBasedExperiment):
         
         for res in tqdm(train, desc="Computing log likelihoods"):
             p_ll = get_lls(res["perturbed_text"], base_model,
-                        base_tokenizer, args.DEVICE)
+                        base_tokenizer, args["DEVICE"])
             res["ll"] = get_ll(res["text"], base_model,
-                            base_tokenizer, args.DEVICE)
+                            base_tokenizer, args["DEVICE"])
             res["all_perturbed_ll"] = p_ll
             res["perturbed_ll_mean"] = np.mean(p_ll)
             res["perturbed_ll_std"] = np.std(p_ll) if len(p_ll) > 1 else 1
 
         for res in tqdm(test, desc="Computing log likelihoods"):
             p_ll = get_lls(res["perturbed_text"], base_model,
-                        base_tokenizer, args.DEVICE)
+                        base_tokenizer, args["DEVICE"])
             res["ll"] = get_ll(res["text"], base_model,
-                            base_tokenizer, args.DEVICE)
+                            base_tokenizer, args["DEVICE"])
             res["all_perturbed_ll"] = p_ll
             res["perturbed_ll_mean"] = np.mean(p_ll)
             res["perturbed_ll_std"] = np.std(p_ll) if len(p_ll) > 1 else 1
@@ -107,7 +107,7 @@ class DetectGPT(PertubationBasedExperiment):
                 }
             },
             'perturbations_info': {
-                'pct_words_masked': args.pct_words_masked,
+                'pct_words_masked': args["pct_words_masked"],
                 'span_length': span_length,
                 'n_perturbations': n_perturbations,
             },

@@ -30,22 +30,26 @@ def load_multiple_from_file(datasets_params, is_interactive: bool):
     unified_data_dict = dict()
     dataset_dict = read_multiple_to_pandas(datasets_params, is_interactive)
     for dataset_data, dataset_params in zip(dataset_dict.items(), datasets_params):
-        print(dataset_params)
         dataset_name, file_dict = dataset_data
-        _, filetype, processor, *processor_args = dataset_params
-        dataset_processor = globals().get(f'process_{processor}')
-        if processor is not None:
-            human_texts, machine_texts = dataset_processor(file_dict, *processor_args)
+        dataset_processor = globals().get(f'process_{dataset_params["processor"]}')
+        if dataset_processor is not None:
+            human_texts, machine_texts = dataset_processor(file_dict, 
+                                                           dataset_params["text_field"], 
+                                                           dataset_params["label_field"], 
+                                                           dataset_params["human_label"], 
+                                                           dataset_params["dataset_other"])
             unified_data_dict[dataset_name] = _data_to_unified(human_texts, machine_texts)
         else:
             raise ValueError(f'Unknown dataset processor: {processor}')
     
     return unified_data_dict
 
-def read_multiple_to_pandas(dataset_params, is_interactive: bool) -> Dict[str, pd.DataFrame]:
+def read_multiple_to_pandas(datasets_params, is_interactive: bool) -> Dict[str, pd.DataFrame]:
     datasets = dict()
-    for filepath, filetype, *_ in dataset_params:
+    for dataset_params in datasets_params:
+        filepath, filetype = dataset_params["filepath"], dataset_params["filetype"]
         read_dataset_to_pandas = read_dir_to_pandas if Path(filepath).is_dir() else read_file_to_pandas
+        print(dataset_params)
         while (df_dict := read_dataset_to_pandas(filepath, filetype, is_interactive)) is None:
             if is_interactive:
                 filetype = input(f'Unknown dataset file format for: {filepath}. Please, input the correct file format manually.\n'

@@ -26,9 +26,9 @@ class SupervisedExperiment(Experiment):
     def __init__(self, data, name, model: str, config, pos_bit=0, finetune=False, num_labels=2, epochs=3):
         super().__init__(data, name)
         self.model = model
-        self.cache_dir = config.cache_dir
-        self.batch_size = config.batch_size
-        self.DEVICE = config.DEVICE
+        self.cache_dir = config["cache_dir"]
+        self.batch_size = config["batch_size"]
+        self.DEVICE = config["DEVICE"]
         self.pos_bit = pos_bit
         self.finetune = finetune
         self.num_labels = num_labels
@@ -36,6 +36,10 @@ class SupervisedExperiment(Experiment):
     
     @timeit
     def run(self):
+        if not os.path.exists(self.cache_dir):
+            os.makedirs(self.cache_dir)
+        print(f"Using cache dir {self.cache_dir}")
+        
         print(f'Beginning supervised evaluation with {self.model}...')
         detector = transformers.AutoModelForSequenceClassification.from_pretrained(
             self.model, num_labels=self.num_labels, cache_dir=self.cache_dir, ignore_mismatched_sizes=True).to(self.DEVICE)

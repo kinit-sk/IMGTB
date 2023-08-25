@@ -107,7 +107,11 @@ def run_full_analysis_from_file(filepath: str, save_path: str):
   with open(filepath, "r") as file:
     results = json.load(file, parse_float=True)
     run_full_analysis(results, save_path)
-    
+
+
+def list_available_analysis_methods():
+  print("analyze_test_metrics ... Separate barplot for each tested metric (Accuracy, Precision, Recall, F1 score) comparing the performance of different methods")
+  print("analyze_text_lengths .. Barplot and a lineplot of F1 score evaluated on different text lengths")
 
 if __name__ == '__main__':
   if sys.argv != 3:

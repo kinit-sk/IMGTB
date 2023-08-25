@@ -42,7 +42,7 @@ class GPTZero(Experiment):
      def __init__(self, data, config): # Add extra parameters if needed
         name = self.__class__.__name__ # Set your own name or leave it set to the class name
         super().__init__(data, name)
-        self.gptzero_key = config.gptzero_key
+        self.gptzero_key = config["gptzero_key"]
      
      def run(self):
          

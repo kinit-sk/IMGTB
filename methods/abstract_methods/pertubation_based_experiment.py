@@ -6,6 +6,7 @@ import torch
 import torch.nn.functional as F
 import random
 import time
+import os
 from tqdm import tqdm
 from methods.utils import load_base_model_and_tokenizer, move_model_to_device
 
@@ -15,24 +16,28 @@ class PertubationBasedExperiment(Experiment):
      def __init__(self, data, config): # Add extra parameters if needed
         name = self.__class__.__name__ # Set your own name or leave it set to the class name
         super().__init__(data, name)
-        self.base_model_name = config.base_model_name
-        self.cache_dir = config.cache_dir
-        self.DEVICE = config.DEVICE
+        self.base_model_name = config["base_model_name"]
+        self.cache_dir = config["cache_dir"]
+        self.DEVICE = config["DEVICE"]
         self.config = config
         self.base_model = None
         self.base_tokenizer = None
      
      def run(self):
+        if not os.path.exists(self.cache_dir):
+            os.makedirs(self.cache_dir)
+        print(f"Using cache dir {self.cache_dir}")
+        
         print(f"Loading BASE model {self.base_model_name}\n")
         self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
             self.base_model_name, self.cache_dir)
         move_model_to_device(self.base_model, self.DEVICE) 
         
-        mask_filling_model_name = self.config.mask_filling_model_name
-        cache_dir = self.config.cache_dir
+        mask_filling_model_name = self.config["mask_filling_model_name"]
+        cache_dir = self.config["cache_dir"]
 
         # get mask filling model (for DetectGPT only)
-        if self.config.random_fills:
+        if self.config["random_fills"]:
             FILL_DICTIONARY = set()
             for texts in self.data['train']['text'] + self.data['test']['text']:
                 for text in texts:
@@ -41,16 +46,16 @@ class PertubationBasedExperiment(Experiment):
 
         int8_kwargs = {}
         half_kwargs = {}
-        if self.config.int8:
+        if self.config["int8"]:
             int8_kwargs = dict(load_in_8bit=True,
                             device_map='auto', torch_dtype=torch.bfloat16)
-        elif self.config.half:
+        elif self.config["half"]:
             half_kwargs = dict(torch_dtype=torch.bfloat16)
         print(f'Loading mask filling model {mask_filling_model_name}...')
         mask_model = transformers.AutoModelForSeq2SeqLM.from_pretrained(
             mask_filling_model_name, **int8_kwargs, **half_kwargs, cache_dir=cache_dir)
 
-        if not self.config.random_fills:
+        if not self.config["random_fills"]:
             try:
                 n_positions = mask_model.config.n_positions
             except AttributeError:
@@ -67,10 +72,10 @@ class PertubationBasedExperiment(Experiment):
         t1 = time.time()
 
         perturbation_results = self.get_perturbation_results(
-            self.config, self.data, mask_model, mask_tokenizer, self.base_model, self.base_tokenizer, self.config.span_length, n_perturbations)
+            self.config, self.data, mask_model, mask_tokenizer, self.base_model, self.base_tokenizer, self.config["span_length"], n_perturbations)
 
         res = self.evaluate_perturbation_results(self.config, perturbation_results, perturbation_mode,
-                                        span_length=self.config.span_length, n_perturbations=n_perturbations)
+                                        span_length=self.config["span_length"], n_perturbations=n_perturbations)
         print(f'{self.name} took %.4f sec' % (time.time() - t1))
         return res
     
@@ -90,7 +95,7 @@ class PertubationBasedExperiment(Experiment):
         p_test_text = perturb_texts(args, [x for x in test_text for _ in range(
             n_perturbations)], mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False)
 
-        for _ in range(args.n_perturbation_rounds - 1):
+        for _ in range(args["n_perturbation_rounds"] - 1):
             try:
                 p_train_text, p_test_text = perturb_texts(args, p_train_text, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False), perturb_texts(
                     args, p_test_text, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False)
@@ -117,7 +122,7 @@ class PertubationBasedExperiment(Experiment):
                 "perturbed_text": p_test_text[idx * n_perturbations: (idx + 1) * n_perturbations],
             })
 
-        # base_model = base_model.to(args.DEVICE)
+        # base_model = base_model.to(args["DEVICE"])
 
         return self.compute_perturbation_results(train, test, base_model, base_tokenizer, args)
     
@@ -138,8 +143,8 @@ def load_mask_model(args, mask_model):
     start = time.time()
 
     # base_model.cpu()
-    if not args.random_fills:
-        mask_model.to(args.DEVICE)
+    if not args["random_fills"]:
+        mask_model.to(args["DEVICE"])
     print(f'DONE ({time.time() - start:.2f}s)')
 
 
@@ -223,12 +228,12 @@ def apply_extracted_fills(masked_texts, extracted_fills):
 
 
 def perturb_texts_(args, texts, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False):
-    span_length = args.span_length
-    buffer_size = args.buffer_size
-    mask_top_p = args.mask_top_p
-    pct = args.pct_words_masked
-    DEVICE = args.DEVICE
-    if not args.random_fills:
+    span_length = args["span_length"]
+    buffer_size = args["buffer_size"]
+    mask_top_p = args["mask_top_p"]
+    pct = args["pct_words_masked"]
+    DEVICE = args["DEVICE"]
+    if not args["random_fills"]:
         masked_texts = [tokenize_and_mask(
             x, span_length, buffer_size, pct, ceil_pct) for x in texts]
         raw_fills = replace_masks(
@@ -260,13 +265,13 @@ def perturb_texts_(args, texts, mask_model, mask_tokenizer, base_tokenizer, ceil
                 perturbed_texts[idx] = x
             attempts += 1
     else:
-        if args.random_fills_tokens:
+        if args["random_fills_tokens"]:
             # tokenize base_tokenizer
             tokens = base_tokenizer(
                 texts, return_tensors="pt", padding=True).to(DEVICE)
             valid_tokens = tokens.input_ids != base_tokenizer.pad_token_id
-            replace_pct = args.pct_words_masked * \
-                (args.span_length / (args.span_length + 2 * args.buffer_size))
+            replace_pct = pct * \
+                (span_length / (span_length + 2 * buffer_size))
 
             # replace replace_pct of input_ids with random tokens
             random_mask = torch.rand(
@@ -286,7 +291,7 @@ def perturb_texts_(args, texts, mask_model, mask_tokenizer, base_tokenizer, ceil
             masked_texts = [tokenize_and_mask(
                 x, span_length, pct, ceil_pct) for x in texts]
             perturbed_texts = masked_texts
-            # replace each <extra_id_*> with args.span_length random words from FILL_DICTIONARY
+            # replace each <extra_id_*> with args["span_length"] random words from FILL_DICTIONARY
             for idx, text in enumerate(perturbed_texts):
                 filled_text = text
                 for fill_idx in range(count_masks([text])[0]):
@@ -303,7 +308,7 @@ def perturb_texts_(args, texts, mask_model, mask_tokenizer, base_tokenizer, ceil
 def perturb_texts(args, texts, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False):
 
     outputs = []
-    for i in tqdm(range(0, len(texts), args.chunk_size), desc="Applying perturbations"):
+    for i in tqdm(range(0, len(texts), args["chunk_size"]), desc="Applying perturbations"):
         outputs.extend(perturb_texts_(args,
-                                      texts[i:i + args.chunk_size], mask_model, mask_tokenizer, base_tokenizer, ceil_pct=ceil_pct))
+                                      texts[i:i + args["chunk_size"]], mask_model, mask_tokenizer, base_tokenizer, ceil_pct=ceil_pct))
     return outputs

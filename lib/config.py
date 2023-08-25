@@ -1,4 +1,7 @@
 import argparse
+import yaml
+import collections.abc
+
 from lib.dataset_loader import SUPPORTED_FILETYPES
 
 """
@@ -18,10 +21,14 @@ DEFAULT_DATASET_LABEL_FIELD = "label"
 DEFAULT_DATASET_HUMAN_LABEL = "0"
 DEFAULT_DATASET_OTHER = None
 
+YAML_CONFIG_DEFAULT_FILEPATH = "lib/default_config.yaml"
+
 
 def get_config():
-    return _parse_cmd_args()
-
+    cmd_args = _parse_cmd_args()
+    if cmd_args["from_config"] is not None:
+        return _from_yaml_config(cmd_args["from_config"])
+    return _transform_cmd_args_to_common(cmd_args)
 
 def _parse_cmd_args():
     parser = argparse.ArgumentParser()
@@ -43,7 +50,8 @@ def _parse_cmd_args():
                         help="Define all dataset parameters.\n"
                              "Usage: --dataset FILEPATH FILETYPE PROCESSOR TEXT_FIELD LABEL_FIELD HUMAN_LABEL OTHER\n"
                              "Only required parameter is the dataset filepath, other parameters will be filled in with their default values."
-                  s           )
+                             )
+    parser.add_argument('--list_datasets', action="store_true")
 
     # List the methods you want to run
     # (methods are named after names of their respective classes in the methods/implemented_methods directory)
@@ -91,11 +99,9 @@ def _parse_cmd_args():
 
     # Parameters for GPTZero detection method
     parser.add_argument('--gptzero_key', type=str, default="")
-
-    # Parameters for automatic benchmark results analysis
-    parser.add_argument('--list_analysis_methods', action='store_true')
-    parser.add_argument('--analysis_methods', type=str,
-                        nargs='+', default=["all"])
+    
+    parser.add_argument('--analysis_methods', nargs="*", default=["all"], type=str)
+    parser.add_argument('--list_analysis_methods', action="store_true")
 
     args = parser.parse_args()
     # Hotfix for argparse issue:
@@ -104,7 +110,7 @@ def _parse_cmd_args():
     if len(args.dataset) != 1:
         args.dataset = args.dataset[1:]
 
-    return args
+    return vars(args) # Return as a dictionary
 
 
 def _parse_dataset_args_by_length(values):
@@ -163,5 +169,93 @@ class _DatasetAppendAction(argparse.Action):
         setattr(namespace, self.dest, items)
 
 
+def _transform_cmd_args_to_common(raw_cmd_args):
+    transformed = {
+        "global": {
+            "interactive": raw_cmd_args["interactive"],
+            "name": raw_cmd_args["name"],
+            "list_methods": raw_cmd_args["list_methods"],
+            "list_datasets": raw_cmd_args["list_datasets"],
+            "list_analysis_methods": raw_cmd_args["list_analysis_methods"]
+        },
+        "data": {
+            "global": {},
+            "list": [ {"filepath": dataset[0],
+                       "filetype": dataset[1],
+                       "processor": dataset[2],
+                       "text_field": dataset[3],
+                       "label_field": dataset[4],
+                       "human_label": dataset[5],
+                       "dataset_other": dataset[6]
+                       } 
+                     for dataset in raw_cmd_args["dataset"]]
+        },
+        "methods":{
+            "global":{ key: raw_cmd_args[key]
+                for key in ["clf_algo_for_threshold", 
+                            "batch_size", 
+                            "base_model_name", 
+                            "mask_filling_model_name", 
+                            "DEVICE",
+                            "cache_dir", 
+                            "pct_words_masked", 
+                            "span_length", 
+                            "n_perturbation_list", 
+                            "n_perturbation_rounds",
+                            "chunk_size",
+                            "n_similarity_samples",
+                            "int8",
+                            "half",
+                            "do_top_k",
+                            "top_p",
+                            "buffer_size",
+                            "mask_top_p",
+                            "random_fills",
+                            "random_fills_tokens",
+                            "gptzero_key"]
+            },
+            "list": [{"name": method} for method in raw_cmd_args["methods"]]
+        },
+        "analysis": [{"name": method} for method in raw_cmd_args["analysis_methods"]]
+            
+    }
+    return _merge_global_with_individual_config(transformed)
+    
+def _merge_global_with_individual_config(config):
+    """Apply global config to each dataset/method in user-specified lists"""
+    for i in range(len(config["data"]["list"])):
+        default = config["data"]["global"].copy()
+        default.update(config["data"]["list"][i])
+        config["data"]["list"][i] = default
+    config["data"].pop("global")
+        
+    for i in range(len(config["methods"]["list"])):
+        default = config["methods"]["global"].copy()
+        default.update(config["methods"]["list"][i])
+        config["methods"]["list"][i] = default
+    config["methods"].pop("global")
+
+    return config
+
+    
+
+def _merge_yaml_config_with_default(config):
+    """Merges global params of default and user-specified yaml config"""
+    with open(YAML_CONFIG_DEFAULT_FILEPATH, "r") as f:
+        default = yaml.safe_load(f)
+        return _deep_update(default, config)
+
+def _deep_update(base, update):
+    for key, value in update.items():
+        if isinstance(value, collections.abc.Mapping):
+            base[key] = _deep_update(base.get(key, {}), value)
+        else:
+            base[key] = value
+    return base           
+
 def _from_yaml_config(filepath: str):
-    pass
+    with open(filepath, "r") as f:
+        config = yaml.safe_load(f)
+        config = _merge_yaml_config_with_default(config)
+        config = _merge_global_with_individual_config(config)
+        return config

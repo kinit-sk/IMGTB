@@ -15,18 +15,18 @@ class DetectLLM_NPR(PertubationBasedExperiment):
         
         for res in tqdm(train, desc="Computing log ranks"):
             p_lr = get_ranks(res["perturbed_text"], base_model,
-                        base_tokenizer, args.DEVICE, log=True)
+                        base_tokenizer, self.DEVICE, log=True)
             res["lr"] = get_rank(res["text"], base_model,
-                            base_tokenizer, args.DEVICE, log=True)
+                            base_tokenizer, self.DEVICE, log=True)
             res["all_perturbed_lr"] = p_lr
             res["perturbed_lr_mean"] = np.mean(p_lr)
             res["perturbed_lr_std"] = np.std(p_lr) if len(p_lr) > 1 else 1
         
         for res in tqdm(test, desc="Computing log ranks"):
             p_lr = get_ranks(res["perturbed_text"], base_model,
-                        base_tokenizer, args.DEVICE, log=True)
+                        base_tokenizer, self.DEVICE, log=True)
             res["lr"] = get_rank(res["text"], base_model,
-                            base_tokenizer, args.DEVICE, log=True)
+                            base_tokenizer, self.DEVICE, log=True)
             res["all_perturbed_lr"] = p_lr
             res["perturbed_lr_mean"] = np.mean(p_lr)
             res["perturbed_lr_std"] = np.std(p_lr) if len(p_lr) > 1 else 1
@@ -105,7 +105,7 @@ class DetectLLM_NPR(PertubationBasedExperiment):
                 }
             },
             'perturbations_info': {
-                'pct_words_masked': args.pct_words_masked,
+                'pct_words_masked': args["pct_words_masked"],
                 'span_length': span_length,
                 'n_perturbations': n_perturbations,
             },
