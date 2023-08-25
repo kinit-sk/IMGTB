@@ -1,18 +1,33 @@
 ---
-global:
+# Global data passed only to the "manager" component (benchmark.py in this case).
+# They will not be passed (directly) to any library or detection method.
+global: 
   interactive: false
   name: null
 
+# Global parameters will be used with all datasets in the list, 
+# if not specified differently in the individual dataset parameters.
+# (parameters in data/list have precedence)
 data:
-  list:
-  - filepath: datasets/test_small.csv
+  global:
     filetype: auto
+  list:
+  - filepath: datasets/test_small_dir
+    processor: test_small_dir
+  - filepath: datasets/test_small.csv
     processor: default
+    filetype: csv
     text_field: text
     label_field: label
     human_label: "0"
     dataset_other: null
+  - filepath: datasets/TruthfulQA_LLMs.csv
+    processor: TruthfulQA
+    dataset_other: ChatGPT
 
+# If you don't specify a parameter, it will be defined with its default value (defined in lib/default_config.yaml).
+# If you want to pass additional new parameters to your detection methods, 
+# you can just create them here and they will be passed on.
 methods:
   global:
     base_model_name: prajjwal1/bert-tiny
@@ -23,6 +38,7 @@ methods:
   - name: EntropyMetric
   - name: RankMetric
     mask_filling_model_name: google/t5-efficient-tiny-el6
+  - name: DetectGPT
 
 analysis:
   - name: analyze_test_metrics

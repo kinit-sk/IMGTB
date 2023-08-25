@@ -50,8 +50,18 @@ python benchmark.py --dataset datasets/SQuAD1_LLMs.csv auto SQuAD1 text label 0 
 
 # Run only selected methods
 python benchmark.py --dataset datasets/SQuAD1_LLMs.csv auto SQuAD1 text label 0 ChatGPT --methods RankMetric EntropyMetric
-```s
+```
 
+## **Configuration**
+You can specify parameters for the benchmark run in two ways:
+
+- Use command-line arguments
+- Create a YAML configuration file
+
+### **Command-line arguments**
+To see a summarization of all of the command-line arguments and options, see either the help message or the `lib/config.py` source file.
+### **YAML configuration file**
+You can specify the config filepath with the command-line option `--from_config FILEPATH`. To see a tutorial example of a YAML config file, see `example_config.yaml` in the main folder. To see all parameters currently accepted, see `lib/default_config.yaml`. 
 ## **Support for custom dataset integration**
 ### **Dataset parameters**
 In the CLI you will have to define a path to your dataset file (or a folder, if your dataset is constructed from multiple files).
@@ -104,7 +114,7 @@ Remember to always implement the `run()` method (sometimes it's implemented in t
 To correctly setup the input parameters in `__init__()` you will have to have a look at this line in `benchmark.py`:
 
 ```python
-    outputs = list(map(lambda obj: obj(data=data, 
+outputs = list(map(lambda obj: obj(data=data, 
                                        model=base_model, 
                                        tokenizer=base_tokenizer, 
                                        DEVICE=DEVICE, 
