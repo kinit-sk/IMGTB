@@ -95,8 +95,9 @@ FULL_ANALYSIS=[analyze_test_metrics, analyze_text_lengths]
 sns.set() 
 
 def run_full_analysis(results, methods, save_path, is_interactive: bool):
+  method_names = map(lambda method: method["name"], methods)
   for fn in FULL_ANALYSIS:
-    if fn not in methods and methods[0] != "all":
+    if fn.__name__ not in method_names and method_names[0] != "all":
       continue
     try:
       fn(results, save_path, is_interactive)

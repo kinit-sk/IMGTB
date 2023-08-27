@@ -1,5 +1,6 @@
 import argparse
 import datetime
+from itertools import zip_longest
 import os
 import sys
 import json
@@ -49,7 +50,7 @@ def main():
 
     if config["global"]["name"] is not None:
         global LOG_PATH
-        LOG_PATH = os.path.join(RESULTS_PATH, "logs", config.name)
+        LOG_PATH = os.path.join(RESULTS_PATH, "logs", config["global"]["name"])
     
     print_w_sep_line(f"Loading datasets {[list(dataset.values())[0] for dataset in config['data']['list']]}...")
     dataset_dict = load_multiple_from_file(datasets_params=config["data"]["list"], is_interactive=config["global"]["interactive"])
@@ -155,10 +156,15 @@ def log_whole_experiment(config, outputs):
 
 def save_method_dataset_combination_results(methods_config, outputs):
     """Log results for all method and dataset combinations separately"""
-
+    is_all = False
+    if methods_config[0]["name"] == "all":
+        is_all = True
+    
     for dataset_name, results_list in outputs.items():
-        for method_results, method_config in zip(results_list, methods_config):
-            method_name = method_config["name"]
+        for method_results, method_config in zip_longest(results_list, methods_config):
+            method_name = method_results["name"]
+            if is_all:
+                method_config = methods_config[0]
             SAVE_PATH =  os.path.join(LOG_METHOD_W_DATASET_PATH, method_name, dataset_name)
             print(f"Saving results from {method_name}" 
                    f" on {dataset_name} dataset to absolute path: {os.path.abspath(SAVE_PATH)}")
