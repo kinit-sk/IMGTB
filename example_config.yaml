@@ -21,9 +21,6 @@ data:
     label_field: label
     human_label: "0"
     dataset_other: null
-  - filepath: datasets/TruthfulQA_LLMs.csv
-    processor: TruthfulQA
-    dataset_other: ChatGPT
 
 # If you don't specify a parameter, it will be defined with its default value (defined in lib/default_config.yaml).
 # If you want to pass additional new parameters to your detection methods, 
