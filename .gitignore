@@ -25,3 +25,9 @@ datasets/*
 !datasets/test_small_dir/*
 
 results/*
+
+# Config files
+./*.yml
+./*.yaml
+!environment.yml
+!example_config.yaml
