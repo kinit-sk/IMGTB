@@ -112,6 +112,7 @@ def run_experiment(data, method_config, method_name, available_experiments):
     try: # Check if method is model name from HuggingFace Hub for sequence classification
         return SupervisedExperiment(data, method_name, method_name, method_config).run()
     except:
+        print(traceback.format_exc())
         pass
     
     raise ValueError(f"Unknown method: {method_name}")
@@ -162,6 +163,8 @@ def save_method_dataset_combination_results(methods_config, outputs):
     
     for dataset_name, results_list in outputs.items():
         for method_results, method_config in zip_longest(results_list, methods_config):
+            if method_results is None:
+                continue
             method_name = method_results["name"]
             if is_all:
                 method_config = methods_config[0]

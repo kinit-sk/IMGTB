@@ -27,7 +27,7 @@ datasets/*
 results/*
 
 # Config files
-./*.yml
-./*.yaml
+*.yml
+*.yaml
 !environment.yml
 !example_config.yaml

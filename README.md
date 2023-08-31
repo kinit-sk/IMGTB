@@ -19,10 +19,7 @@ Currently, we support the following methods. To add a new method you can see the
     - DetectLLM-LLR [[Ref]](https://arxiv.org/abs/2306.05540);
     - DetectLLM-NPR [[Ref]](https://arxiv.org/abs/2306.05540);
 - Model-based methods:
-    - OpenAI Detector [[Ref]](https://arxiv.org/abs/1908.09203);
-    - ChatGPT Detector [[Ref]](https://arxiv.org/abs/2301.07597);
-    - GPTZero [[Ref]](https://gptzero.me/);
-    - LM Detector [[Ref]](https://arxiv.org/abs/1911.00650);
+    - Any HuggingFace text classification model
 
 ## **Supported Datasets**
 - TruthfulQA;
@@ -159,6 +156,25 @@ results_analysis.py results/logs/SOME_BENCHMARK_RESULTS.json SAVE_PATH
 Currently, we are able to visualize:
 - Multiple metrics (Accuracy, Precision, Recall, F1 score) evaluated on the test data partition
 - F1 score for multiple different text length groups
+- Prediction Probability Distribution - How much and how often is the detection method sure of its predictions
+- Prediction Probability Error Distribution - How far was the prediction from true label, how often
+- False Positives Analysis - Analyzes the predictions for solely the negative samples. It uses the following terminology:
+    | Label |                          |  Prediction Probability |
+    | ----- | ------------------------ | -------------- |
+    | TN    | True Negative            | 0-20% machine  |
+    | PTN   | Partially True Negative  | 20-40% machine |
+    | UNC   | Unclear                  | 40-60% machine |
+    | PFP   | Partially False Positive | 60-80% machine |
+    | FP    | False Positive           | 80-100% machine|
+
+- False Negatives Analysis - Analyzes the predictions for solely the positive samples. It uses the following terminology:
+    | Label |                           |  Prediction Probability |
+    | ----- | ------------------------- | -------------- |
+    | FN    | False Negative            | 0-20% machine  |
+    | PFN   | Partially False Negative  | 20-40% machine |
+    | UNC   | Unclear                   | 40-60% machine |
+    | PTP   | Partially True Positive   | 60-80% machine |
+    | TP    | True Positive             | 80-100% machine|
 
 You can add your own analysis method by defining it in the `results_analysis.py` source file.
 

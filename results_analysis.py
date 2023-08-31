@@ -1,5 +1,7 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 from sklearn.metrics import classification_report
 import seaborn as sns
 from math import ceil, sqrt
@@ -7,7 +9,21 @@ import os
 import traceback
 import sys
 import json
+from collections import Counter
 
+########################################
+#            Helper functions          #
+########################################
+
+def _find_interval_label(labeled_intervals, num):
+  for label, interval in labeled_intervals.items():
+    if num in interval:
+      return label
+
+
+########################################
+#           Analysis methods           #
+########################################
 
 def analyze_test_metrics(results_list, save_path, is_interactive: bool):
   for dataset_name, dataset_results in results_list.items():
@@ -85,17 +101,209 @@ def analyze_text_lengths(results_list, save_path, is_interactive: bool):
     fig.add_subplot(rows, cols, 2)
     ax = sns.lineplot(results, x="Length group", y="F1-score", hue="Detector")
     ax.set(ylim=(0, 1), xlabel="Length group (word count)")
-      
-    plt.savefig(os.path.join(save_path, f'{dataset_name}_text_lengths_analysis.png'))
+    
+    fig.tight_layout()
+    plt.savefig(os.path.join(save_path, f'{dataset_name}_text_lengths_analysis.png'), dpi=600)
     if is_interactive:
       plt.show()
 
+def analyze_pred_prob_hist(results_list, save_path, is_interactive: bool):
+  """
+  For each method evaluated on a given dataset, 
+  show a histogram of prediction probability values 
+  (probability that a text is machine-generated)
+  """
+  for dataset_name, dataset_results in results_list.items():
+    results = pd.DataFrame()
+    for detector in dataset_results:
+      results = pd.concat([results, pd.DataFrame({detector["name"]: detector["machine_prob"]["test"]})], axis="columns", copy=False)  
+    fig = plt.figure(figsize=(10, 10))
+    fig.suptitle(f"{dataset_name}/Prediction Probability Histograms", fontsize=16)
+    
+    rows = cols = ceil(sqrt(len(results.columns)))
+    
+    for i in range(len(results.columns)):
+      column_name = results.columns[i]
+      fig.add_subplot(rows, cols, i+1)
+      ax = sns.histplot(results[column_name])
+      ax.set(xlim=(0,1))
 
-FULL_ANALYSIS=[analyze_test_metrics, analyze_text_lengths]
+    """
+    plt.subplots_adjust(left=0.1,
+                      bottom=0.155,
+                      right=0.9,
+                      top=0.85,
+                      wspace=0.33,
+                      hspace=0.8)
+    """
+    
+    fig.tight_layout()
+    plt.savefig(os.path.join(save_path, f"{dataset_name}_pred_prob_hist_analysis.png"), dpi=600)
+    if is_interactive:
+      plt.show()
+
+def analyze_pred_prob_error_hist(results_list, save_path, is_interactive: bool):
+  """
+  For each method evaluated on a given dataset, 
+  show a histogram of errors in prediction 
+  (how far was the prediction from true label, how often)
+  """
+  for dataset_name, dataset_results in results_list.items():
+    results = pd.DataFrame()
+    for detector in dataset_results:
+      results = pd.concat([results, pd.DataFrame(
+        {detector["name"]: abs(np.array(detector["machine_prob"]["test"]) - np.array(detector["input_data"]["test"]["label"]))
+         })], axis="columns", copy=False)  
+    
+    fig = plt.figure(figsize=(10, 10))
+    fig.suptitle(f"{dataset_name}/Prediction Probability Error Histograms", fontsize=16)
+    
+    rows = cols = ceil(sqrt(len(results.columns)))
+    
+    for i in range(len(results.columns)):
+      column_name = results.columns[i]
+      fig.add_subplot(rows, cols, i+1)
+      ax = sns.histplot(results[column_name])
+      ax.set(title=column_name, xlim=(0,1))
+
+    """
+    plt.subplots_adjust(left=0.1,
+                      bottom=0.155,
+                      right=0.9,
+                      top=0.85,
+                      wspace=0.33,
+                      hspace=0.8)
+    """
+    
+    fig.tight_layout()  
+    plt.savefig(os.path.join(save_path, f"{dataset_name}_pred_prob_error_hist_analysis.png"), dpi=600)
+    if is_interactive:
+      plt.show()
+
+def analyze_false_positives(results_list, save_path, is_interactive: bool):
+  """
+  TN - true negative
+  PTN - partially true negative
+  UNC - unclear
+  PFP - partially false positive
+  FP - false positive
+  """
+  PRED_PROB_INTERVALS = {
+    "TN": pd.Interval(0, 0.2),
+    "PTN": pd.Interval(0.2, 0.4),
+    "UNC": pd.Interval(0.4, 0.6),
+    "PFP": pd.Interval(0.6, 0.8),
+    "FP": pd.Interval(0.8, 1)
+  }
+  
+  for dataset_name, dataset_results in results_list.items():
+    results = pd.DataFrame(columns=['Detector', 'TN', 'PTN', 'UNC', 'PFP', 'FP'])
+    results = results.astype({"Detector": "object", 
+                    "TN": "float64", 
+                    "PTN": "float64", 
+                    "UNC": "float64", 
+                    "PFP": "float64", 
+                    "FP": "float64"})
+    for detector in dataset_results:
+      pred_data = pd.DataFrame({
+        "pred_prob": detector["machine_prob"]["test"], 
+        "true_label": detector["input_data"]["test"]["label"]})
+      pred_data_positive = pred_data[pred_data["true_label"] == 0]
+      pred_data_positive["confusion_label"] = pred_data_positive.apply(lambda row: _find_interval_label(PRED_PROB_INTERVALS, row["pred_prob"]), axis="columns")
+      
+      counts = dict(Counter(list(pred_data_positive["confusion_label"])))
+      counts_sum = sum(counts.values())
+      results = pd.concat([results, pd.DataFrame(
+        {"Detector": detector["name"], 
+         "TN": counts.get("TN", 0) / counts_sum * 100,
+         "PTN": counts.get("PTN", 0) / counts_sum * 100,
+         "UNC": counts.get("UNC", 0) / counts_sum * 100,
+         "PFP": counts.get("PFP", 0) / counts_sum * 100,
+         "FP": counts.get("FP", 0) / counts_sum * 100}, index=[0])], axis="index", ignore_index=True)
+    
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    results.plot(stacked=True, ax=ax, kind="barh", x="Detector")
+    ax.set(title=f"{dataset_name}/False Positives Analysis", xlim=(0,100))
+    ax.xaxis.set_major_formatter(mtick.PercentFormatter())
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+    fig.tight_layout()
+    plt.savefig(os.path.join(save_path, f"{dataset_name}_false_positives_analysis.png"), dpi=600)
+    if is_interactive:
+      plt.show()  
+  
+  
+
+def analyze_false_negatives(results_list, save_path, is_interactive: bool):
+  """
+  FN - false negative
+  PFN - partially false negative
+  UNC - unclear
+  PTP - partially true positive
+  TP - true positive
+  """
+  PRED_PROB_INTERVALS = {
+    "FN": pd.Interval(0, 0.2),
+    "PFN": pd.Interval(0.2, 0.4),
+    "UNC": pd.Interval(0.4, 0.6),
+    "PTP": pd.Interval(0.6, 0.8),
+    "TP": pd.Interval(0.8, 1)
+  }
+  
+  for dataset_name, dataset_results in results_list.items():
+    results = pd.DataFrame(columns=['Detector', 'FN', 'PFN', 'UNC', 'PTP', 'TP'])
+    results = results.astype({"Detector": "object", 
+                    "FN": "float64", 
+                    "PFN": "float64", 
+                    "UNC": "float64", 
+                    "PTP": "float64", 
+                    "TP": "float64"})
+    for detector in dataset_results:
+      pred_data = pd.DataFrame({
+        "pred_prob": detector["machine_prob"]["test"], 
+        "true_label": detector["input_data"]["test"]["label"]})
+      pred_data_positive = pred_data[pred_data["true_label"] == 1]
+      pred_data_positive["confusion_label"] = pred_data_positive.apply(lambda row: _find_interval_label(PRED_PROB_INTERVALS, row["pred_prob"]), axis="columns")
+      
+      counts = dict(Counter(list(pred_data_positive["confusion_label"])))
+      counts_sum = sum(counts.values())
+      results = pd.concat([results, pd.DataFrame(
+        {"Detector": detector["name"], 
+         "FN": counts.get("FN", 0) / counts_sum * 100,
+         "PFN": counts.get("PFN", 0) / counts_sum * 100,
+         "UNC": counts.get("UNC", 0) / counts_sum * 100,
+         "PTP": counts.get("PTP", 0) / counts_sum * 100,
+         "TP": counts.get("TP", 0) / counts_sum * 100}, index=[0])], axis="index", ignore_index=True)
+    
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    results.plot(stacked=True, ax=ax, kind="barh", x="Detector")
+    ax.set(title=f"{dataset_name}/False Negatives Analysis", xlim=(0,100))
+    ax.xaxis.set_major_formatter(mtick.PercentFormatter())
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+    fig.tight_layout()
+    plt.savefig(os.path.join(save_path, f"{dataset_name}_false_negatives_analysis.png"), dpi=600)
+    if is_interactive:
+      plt.show()
+      
+  def analyze_by_category(results_list, save_path, is_interactive: bool):
+    pass
+  
+
+
+#########################################
+#                  Main                 #
+#########################################
+
+
+FULL_ANALYSIS=[globals()[key] for key in globals() if key.startswith("analyze")]
+
 sns.set() 
 
 def run_full_analysis(results, methods, save_path, is_interactive: bool):
-  method_names = map(lambda method: method["name"], methods)
+  method_names = list(map(lambda method: method["name"], methods))
   for fn in FULL_ANALYSIS:
     if fn.__name__ not in method_names and method_names[0] != "all":
       continue
@@ -113,9 +321,13 @@ def run_full_analysis_from_file(filepath: str, save_path: str):
 
 
 def list_available_analysis_methods():
-  print("analyze_test_metrics ... Separate barplot for each tested metric (Accuracy, Precision, Recall, F1 score) comparing the performance of different methods")
-  print("analyze_text_lengths .. Barplot and a lineplot of F1 score evaluated on different text lengths")
-
+  print("analyze_test_metrics     ...   Separate barplot for each tested metric (Accuracy, Precision, Recall, F1 score) comparing the performance of different methods")
+  print("analyze_text_lengths     ...   Barplot and a lineplot of F1 score evaluated on different text lengths")
+  print("pred_prob_hist           ...   For each method evaluated on a given dataset, show a histogram of prediction probability values (probability that a text is machine-generated)")
+  print("pred_prob_error_hist     ...   For each method evaluated on a given dataset, show a histogram of errors in prediction (how far was the prediction from true label, how often)")
+  print("analyze_false_positives  ...   Analyze false positive rates")
+  print("analyze_false_negatives  ...   Analyze false negative rates")
+  
 if __name__ == '__main__':
   if sys.argv != 3:
     print("Please, specify file to run the analysis on and a save path to store analysis results. Aborting...")

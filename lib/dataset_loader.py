@@ -49,7 +49,6 @@ def read_multiple_to_pandas(datasets_params, is_interactive: bool) -> Dict[str, 
     for dataset_params in datasets_params:
         filepath, filetype = dataset_params["filepath"], dataset_params["filetype"]
         read_dataset_to_pandas = read_dir_to_pandas if Path(filepath).is_dir() else read_file_to_pandas
-        print(dataset_params)
         while (df_dict := read_dataset_to_pandas(filepath, filetype, is_interactive)) is None:
             if is_interactive:
                 filetype = input(f'Unknown dataset file format for: {filepath}. Please, input the correct file format manually.\n'
