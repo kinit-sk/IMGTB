@@ -80,7 +80,7 @@ class DetectGPT(PertubationBasedExperiment):
 
         name = f'perturbation_{n_perturbations}_{criterion}'
 
-        train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test)
+        train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test, config=self.config)
         acc_train, precision_train, recall_train, f1_train, auc_train = train_res
         acc_test, precision_test, recall_test, f1_test, auc_test = test_res
 

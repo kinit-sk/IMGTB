@@ -20,7 +20,8 @@ methods:
   global:
     cache_dir: .cache
     DEVICE: cuda
-    clf_algo_for_threshold: LogisticRegression
+    clf_algo_for_threshold:
+      name: LogisticRegression
     batch_size: 16
     base_model_name: prajjwal1/bert-tiny
     mask_filling_model_name: google/t5-efficient-tiny-el6

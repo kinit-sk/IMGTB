@@ -12,6 +12,6 @@ class GenericMetricBasedTemplate(MetricBasedExperiment):
         Args:
             text (str)
             
-        Returns a numeric score assigned to the input text by the criterion.
+        Returns a numpy array of numeric criteria (numeric scores)
         """
         raise NotImplementedError("Attempted to call an abstract method.")

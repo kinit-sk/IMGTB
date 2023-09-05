@@ -287,11 +287,6 @@ def analyze_false_negatives(results_list, save_path, is_interactive: bool):
     plt.savefig(os.path.join(save_path, f"{dataset_name}_false_negatives_analysis.png"), dpi=600)
     if is_interactive:
       plt.show()
-      
-  def analyze_by_category(results_list, save_path, is_interactive: bool):
-    pass
-  
-
 
 #########################################
 #                  Main                 #

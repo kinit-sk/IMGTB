@@ -14,13 +14,13 @@ import torch
 import torch.nn.functional as F
 
 CLF_MODELS = {
-    "LogisticRegression": LogisticRegression(random_state=0),
-    "KNeighborsClassifier": KNeighborsClassifier(),
-    "SVC": SVC(random_state=0, probability=True),
-    "DecisionTreeClassifier": DecisionTreeClassifier(random_state=0),
-    "RandomForestClassifier": RandomForestClassifier(random_state=0),
-    "MLPClassifier": MLPClassifier(random_state=0),
-    "AdaBoostClassifier": AdaBoostClassifier(random_state=0)
+    "LogisticRegression": LogisticRegression,
+    "KNeighborsClassifier": KNeighborsClassifier,
+    "SVC": SVC,
+    "DecisionTreeClassifier": DecisionTreeClassifier,
+    "RandomForestClassifier": RandomForestClassifier,
+    "MLPClassifier": MLPClassifier,
+    "AdaBoostClassifier": AdaBoostClassifier
 }
 
 def timeit(func):
@@ -117,13 +117,15 @@ def cal_metrics(label, pred_label, pred_posteriors):
     return acc, precision, recall, f1, auc
 
 
-def get_clf_results(x_train, y_train, x_test, y_test, clf_model_name="LogisticRegression"):
+def get_clf_results(x_train, y_train, x_test, y_test, config):
 
-    if CLF_MODELS.get(clf_model_name) is None:
-        raise ValueError(f"Unsupported classification algorithm for threshold computation selected: {clf_model_name}")
+    clf_algo_config = config["clf_algo_for_threshold"]
+    clf_algo_name = clf_algo_config["name"]
+    if CLF_MODELS.get(clf_algo_name) is None:
+        raise ValueError(f"Unsupported classification algorithm for threshold computation selected: {clf_algo_name}")
     
-    clf_model = CLF_MODELS[clf_model_name]
-    
+    clf_algo = CLF_MODELS[clf_algo_name]
+    clf_model = clf_algo(**{key: value for key, value in clf_algo_config.items() if key != 'name'})
     clf = clf_model.fit(x_train, y_train)
 
     y_train_pred = clf.predict(x_train)
@@ -184,3 +186,28 @@ def get_entropy(text, model, tokenizer, DEVICE):
         logits = model(**tokenized).logits[:, :-1]
         neg_entropy = F.softmax(logits, dim=-1) * F.log_softmax(logits, dim=-1)
         return -neg_entropy.sum(-1).mean().item()
+
+def get_llm_deviation(text, model, tokenizer, DEVICE):
+    with torch.no_grad():
+        tokenized = tokenizer(text, return_tensors="pt").to(DEVICE)
+        logits = model(**tokenized).logits[:, :-1]
+        labels = tokenized.input_ids[:, 1:]
+
+        # get rank of each label token in the model's likelihood ordering
+        matches = (logits.argsort(-1, descending=True)
+                == labels.unsqueeze(-1)).nonzero()
+        assert matches.shape[
+            1] == 3, f"Expected 3 dimensions in matches tensor, got {matches.shape}"
+
+        ranks, timesteps = matches[:, -1], matches[:, -2]
+
+        # make sure we got exactly one match for each timestep in the sequence
+        assert (timesteps == torch.arange(len(timesteps)).to(
+            timesteps.device)).all(), "Expected one match per timestep"
+
+        ranks = ranks.float() + 1  # convert to 1-indexed rank
+        
+        ranks = torch.log(ranks)
+        ranks = torch.square(ranks)
+
+        return ranks.float().mean().item()

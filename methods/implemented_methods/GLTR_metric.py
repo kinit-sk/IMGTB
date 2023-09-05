@@ -42,7 +42,7 @@ class GLTRMetric(MetricBasedExperiment):
             if res.sum() > 0:
                 res = res / res.sum()
 
-            return res
+            return np.array([res])
     
     @timeit
     def run(self):
