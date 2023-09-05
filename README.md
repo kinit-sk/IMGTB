@@ -134,6 +134,12 @@ Each experiment run should return a JSON-compatible dictionary with results with
 - machine_prob - predicted probability that a given text is machine-generated
 - metrics_results - evaluation of different classification metrics (e.g. Accuracy, Precision, F1...), usually split into train and test sections
 
+### **Support for Text Clasisfication Hugging Face Hub models**
+Aside from locally defined Experiment classes, you can specify a Hugging Face Hub Text Classification model as the name of the method in three different ways:
+1. a string with the shortcut name of a pre-trained model to load from cache or download, e.g.: bert-base-uncased
+2. a string with the identifier name of a pre-trained model that was user-uploaded to our S3, e.g.: dbmdz/bert-base-german-cased
+3. a path to a directory containing model weights saved using save_pretrained(), e.g.: ./my_model_directory/
+
 #### **Note**:
 While developing your new method, you might find useful some of the functionality in `methods/utils.py`
 

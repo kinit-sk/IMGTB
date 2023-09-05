@@ -36,7 +36,10 @@ methods:
   - name: RankMetric
     mask_filling_model_name: google/t5-efficient-tiny-el6
   - name: DetectGPT
+  - name: ProsusAI/finbert # You can specify any pretrained text classification model from Hugging Face Hub by providing its identifier (for more info see docs) 
 
+# You can either list different analysis methods by name
+# Or select " - name: all" to run all available  
 analysis:
   - name: analyze_test_metrics
   - name: analyze_text_lengths
