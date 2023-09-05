@@ -8,13 +8,12 @@ import random
 import time
 import os
 from tqdm import tqdm
-from methods.utils import load_base_model_and_tokenizer, move_model_to_device
+from methods.utils import load_base_model_and_tokenizer, move_model_to_device, get_clf_results
 
 FILL_DICTIONARY = set()
 
 class PertubationBasedExperiment(Experiment):
-     def __init__(self, data, config): # Add extra parameters if needed
-        name = self.__class__.__name__ # Set your own name or leave it set to the class name
+     def __init__(self, data, name, config): # Add extra parameters if needed
         super().__init__(data, name)
         self.base_model_name = config["base_model_name"]
         self.cache_dir = config["cache_dir"]
@@ -22,6 +21,9 @@ class PertubationBasedExperiment(Experiment):
         self.config = config
         self.base_model = None
         self.base_tokenizer = None
+     
+     def get_score(self, text, perturbed_texts, base_model, base_tokenizer, DEVICE):
+        raise NotImplementedError("Attempted to call an abstract method.")
      
      def run(self):
         if not os.path.exists(self.cache_dir):
@@ -127,11 +129,73 @@ class PertubationBasedExperiment(Experiment):
         return self.compute_perturbation_results(train, test, base_model, base_tokenizer, args)
     
      def compute_perturbation_results(self, train, test, base_model, base_tokenizer, args):
-        raise NotImplementedError("Attempted to call an abstract method.")
-    
-     def evaluate_perturbation_results(self, args, perturbation_results, perturbation_mode,
-                                        span_length, n_perturbations):
-        raise NotImplementedError("Attempted to call an abstract method.")
+        
+        for res in tqdm(train, desc="Computing metrics"):
+            res["score"] = self.get_score(res["text"], res["perturbed_text"], base_model,
+                            base_tokenizer, args["DEVICE"])
+            
+        for res in tqdm(test, desc="Computing metrics"):
+            res["score"] = self.get_score(res["text"], res["perturbed_text"], base_model,
+                            base_tokenizer, args["DEVICE"])
+            
+        results = {"train": train, "test": test}
+        return results
+
+     def evaluate_perturbation_results(self, args, results, criterion, span_length=10, n_perturbations=1):
+            # Train
+            train_predictions = []
+            for res in results['train']:
+                train_predictions.append(res['score'])
+
+            # Test
+            test_predictions = []
+            for res in results['test']:
+                test_predictions.append(res['score'])
+
+            x_train = train_predictions
+            x_train = np.expand_dims(x_train, axis=-1)
+            y_train = [_['label'] for _ in results['train']]
+
+            x_test = test_predictions
+            x_test = np.expand_dims(x_test, axis=-1)
+            y_test = [_['label'] for _ in results['test']]
+
+            name = f'perturbation_{n_perturbations}_{criterion}'
+
+            train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test, config=self.config)
+            acc_train, precision_train, recall_train, f1_train, auc_train = train_res
+            acc_test, precision_test, recall_test, f1_test, auc_test = test_res
+
+            print(f"{name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
+            print(f"{name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
+
+            return {
+                'name': self.name,
+                'input_data': self.data,
+                'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
+                'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
+                'metrics_results': {
+                    'train': {
+                        'acc': acc_train,
+                        'precision': precision_train,
+                        'recall': recall_train,
+                        'f1': f1_train
+                    },
+                    'test': {
+                        'acc': acc_test,
+                        'precision': precision_test,
+                        'recall': recall_test,
+                        'f1': f1_test
+                    }
+                },
+                'perturbations_info': {
+                    'pct_words_masked': args["pct_words_masked"],
+                    'span_length': span_length,
+                    'n_perturbations': n_perturbations,
+                },
+                'raw_results': results
+            }
+        
 
         
 

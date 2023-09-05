@@ -152,10 +152,6 @@ def get_ll(text, base_model, base_tokenizer, DEVICE):
         return -base_model(**tokenized, labels=labels).loss.item()
         # https://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py#L1317
 
-
-def get_lls(texts, base_model, base_tokenizer, DEVICE):
-    return [get_ll(_, base_model, base_tokenizer, DEVICE) for _ in texts]
-
 def get_rank(text, model, tokenizer, DEVICE, log=False):
     with torch.no_grad():
         tokenized = tokenizer(text, return_tensors="pt").to(DEVICE)
