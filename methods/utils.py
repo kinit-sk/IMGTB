@@ -100,7 +100,14 @@ def move_model_to_device(base_model, DEVICE):
 
 
 def cal_metrics(label, pred_label, pred_posteriors):
-    if len(set(label)) < 3:
+    if len(set(label)) < 2:
+        acc = accuracy_score(label, pred_label)
+        precision = precision_score(label, pred_label)
+        recall = recall_score(label, pred_label)
+        f1 = f1_score(label, pred_label)
+        print("Cannot evaluate AUC metric on data with less than 2 labels. Setting AUC to 0...")
+        auc = 0
+    elif len(set(label)) == 2:
         acc = accuracy_score(label, pred_label)
         precision = precision_score(label, pred_label)
         recall = recall_score(label, pred_label)

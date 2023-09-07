@@ -29,43 +29,43 @@ def main():
 
     if config["global"]["list_methods"]:
         experiments = scan_for_detection_methods()
-        print_w_sep_line("Locally available methods:\n")
+        print_w_sep_line("Locally available methods:\n", config["global"]["interactive"])
         for exp in experiments: print(exp.__name__)
-        print_w_sep_line("Finish")
+        print_w_sep_line("Finish", config["global"]["interactive"])
         exit(0)
     
     if config["global"]["list_datasets"]:
-        print_w_sep_line("Available datasets:\n")
+        print_w_sep_line("Available datasets:\n", config["global"]["interactive"])
         pathlist = Path(DATASETS_PATH).iterdir()
         for path in pathlist:
             print(path.stem)
-        print_w_sep_line("Finish")
+        print_w_sep_line("Finish", config["global"]["interactive"])
         exit(0)
 
     if config["global"]["list_analysis_methods"]:
-        print_w_sep_line("Available analysis methods:\n")
+        print_w_sep_line("Available analysis methods:\n", config["global"]["interactive"])
         list_available_analysis_methods()
-        print_w_sep_line("Finish")
+        print_w_sep_line("Finish", config["global"]["interactive"])
         exit(0)
 
     if config["global"]["name"] is not None:
         global LOG_PATH
         LOG_PATH = os.path.join(RESULTS_PATH, "logs", config["global"]["name"])
     
-    print_w_sep_line(f"Loading datasets {[list(dataset.values())[0] for dataset in config['data']['list']]}...")
+    print_w_sep_line(f"Loading datasets {[list(dataset.values())[0] for dataset in config['data']['list']]}...", config["global"]["interactive"])
     dataset_dict = load_multiple_from_file(datasets_params=config["data"]["list"], is_interactive=config["global"]["interactive"])
 
-    print_w_sep_line("Running benchmark...")
+    print_w_sep_line("Running benchmark...", config["global"]["interactive"])
     benchmark_results = run_benchmark(dataset_dict, config)
 
-    print_w_sep_line("Saving experiment results\n")
+    print_w_sep_line("Saving experiment results\n", config["global"]["interactive"])
     log_whole_experiment(config, benchmark_results)    
     save_method_dataset_combination_results(config["methods"]["list"], benchmark_results)
     
-    print_w_sep_line("Running analysis:\n")
+    print_w_sep_line("Running analysis:\n", config["global"]["interactive"])
     run_full_analysis(benchmark_results, config["analysis"], LOG_PATH, config["global"]["interactive"])
     
-    print_w_sep_line("Finish")
+    print_w_sep_line("Finish", config["global"]["interactive"])
                    
 def run_benchmark(dataset_dict, config):
     
@@ -73,7 +73,7 @@ def run_benchmark(dataset_dict, config):
     outputs = dict()
     
     for dataset_name, data in dataset_dict.items():
-        print_w_sep_line(f"Running experiments on {dataset_name} dataset:\n")    
+        print_w_sep_line(f"Running experiments on {dataset_name} dataset:\n", config["global"]["interactive"])    
         outputs[dataset_name] = []
         
         if config["methods"]["list"][0]["name"] == "all":
@@ -165,7 +165,7 @@ def save_method_dataset_combination_results(methods_config, outputs):
         for method_results, method_config in zip_longest(results_list, methods_config):
             if method_results is None:
                 continue
-            method_name = method_results["name"]
+            method_name = method_results["name"].replace("/", "-") # slash would create nested directory
             if is_all:
                 method_config = methods_config[0]
             SAVE_PATH =  os.path.join(LOG_METHOD_W_DATASET_PATH, method_name, dataset_name)
@@ -179,8 +179,10 @@ def save_method_dataset_combination_results(methods_config, outputs):
                 json.dump(data, file)
 
 
-def print_w_sep_line(text: str) -> None:
-    width = os.get_terminal_size().columns 
+def print_w_sep_line(text: str, is_interactive=True) -> None:
+    width = 80
+    if is_interactive:
+        width = os.get_terminal_size().columns 
     print('-' * width)
     print(text)
     

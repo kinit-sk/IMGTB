@@ -156,8 +156,12 @@ def _data_to_unified(human_texts: pd.Series, machine_texts: pd.Series) \
     texts = pd.concat([human_texts, machine_texts], axis=0, names=["text"]).reset_index(drop=True)
     labels = pd.Series([0]*len(human_texts) + [1]*len(machine_texts))
     data = pd.DataFrame(data={"text": texts, "label": labels}).reset_index(drop=True)
-
-    data_train, data_test = train_test_split(data, test_size=0.2, random_state=42, shuffle=True, stratify=data["label"])
+    
+    # Try to stratify, if possible
+    try:
+        data_train, data_test = train_test_split(data, test_size=0.2, random_state=42, shuffle=True, stratify=data["label"])
+    except ValueError:
+        data_train, data_test = train_test_split(data, test_size=0.2, random_state=42, shuffle=True, stratify=None)
 
     return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
 

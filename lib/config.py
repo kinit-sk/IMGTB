@@ -170,6 +170,29 @@ class _DatasetAppendAction(argparse.Action):
 
 
 def _transform_cmd_args_to_common(raw_cmd_args):
+    methods_config_global = { key: raw_cmd_args[key]
+                for key in ["batch_size", 
+                            "base_model_name", 
+                            "mask_filling_model_name", 
+                            "DEVICE",
+                            "cache_dir", 
+                            "pct_words_masked", 
+                            "span_length", 
+                            "n_perturbation_list", 
+                            "n_perturbation_rounds",
+                            "chunk_size",
+                            "n_similarity_samples",
+                            "int8",
+                            "half",
+                            "do_top_k",
+                            "top_p",
+                            "buffer_size",
+                            "mask_top_p",
+                            "random_fills",
+                            "random_fills_tokens",
+                            "gptzero_key"]
+            }
+    methods_config_global.update({"clf_algo_for_threshold": {"name": raw_cmd_args["clf_algo_for_threshold"]}})
     transformed = {
         "global": {
             "interactive": raw_cmd_args["interactive"],
@@ -191,29 +214,8 @@ def _transform_cmd_args_to_common(raw_cmd_args):
                      for dataset in raw_cmd_args["dataset"]]
         },
         "methods":{
-            "global":{ key: raw_cmd_args[key]
-                for key in ["clf_algo_for_threshold", 
-                            "batch_size", 
-                            "base_model_name", 
-                            "mask_filling_model_name", 
-                            "DEVICE",
-                            "cache_dir", 
-                            "pct_words_masked", 
-                            "span_length", 
-                            "n_perturbation_list", 
-                            "n_perturbation_rounds",
-                            "chunk_size",
-                            "n_similarity_samples",
-                            "int8",
-                            "half",
-                            "do_top_k",
-                            "top_p",
-                            "buffer_size",
-                            "mask_top_p",
-                            "random_fills",
-                            "random_fills_tokens",
-                            "gptzero_key"]
-            },
+            "global": methods_config_global,
+            
             "list": [{"name": method} for method in raw_cmd_args["methods"]]
         },
         "analysis": [{"name": method} for method in raw_cmd_args["analysis_methods"]]
