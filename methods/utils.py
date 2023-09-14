@@ -69,7 +69,7 @@ def filter_test_data(data, max_length=25):
     for i in range(len(data['test']['text'])):
         text = data['test']['text'][i]
         label = data['test']['label'][i]
-        if len(text.split()) <= 25:
+        if len(text.split()) <= max_length:
             new_test['text'].append(text)
             new_test['label'].append(label)
     data['test'] = new_test
