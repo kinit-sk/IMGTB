@@ -38,7 +38,6 @@ def _parse_cmd_args():
                         help="Set a custom name for the results log save file.")
     parser.add_argument('--from_config', type=str, default=None,
                         help="Specify filepath to YAML config file from which to read all parameters instead of the command-line arguments")
-
     # Parameters for dataset loading/parsing
     parser.add_argument('--dataset', nargs='+', action=_DatasetAppendAction, type=str, default=[(DEFAULT_DATASET_FILEPATH,
                                                                                                  DEFAULT_DATASET_FILETYPE,
@@ -82,7 +81,7 @@ def _parse_cmd_args():
     # Parameters for DetectGPT detection method
     parser.add_argument('--pct_words_masked', type=float, default=0.3)
     parser.add_argument('--span_length', type=int, default=2)
-    parser.add_argument('--n_perturbation_list', type=str, default="10")
+    parser.add_argument('--n_perturbations', type=int, default=10)
     parser.add_argument('--n_perturbation_rounds', type=int, default=1)
     parser.add_argument('--chunk_size', type=int, default=20)
     parser.add_argument('--n_similarity_samples', type=int, default=20)
@@ -178,7 +177,7 @@ def _transform_cmd_args_to_common(raw_cmd_args):
                             "cache_dir", 
                             "pct_words_masked", 
                             "span_length", 
-                            "n_perturbation_list", 
+                            "n_perturbations", 
                             "n_perturbation_rounds",
                             "chunk_size",
                             "n_similarity_samples",

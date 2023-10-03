@@ -35,7 +35,7 @@ You can download the supported datasets from from [Google Drive](https://drive.g
 ```bash
 git clone https://github.com/michalspiegel/IntegratedMGTBenchFramework.git;
 cd IntegratedMGTBenchFramework;
-conda env create -f environment.yml;
+conda env create -f environment.yaml;
 conda activate IntegratedMGTBenchFramework;
 ```
 
@@ -73,6 +73,16 @@ The general dataset definition or usage of the `--dataset` option would be:
 ```
 Only required parameter is the dataset filepath, other parameters will be filled in with their default values, if left empty.
 
+#### **Supported dataset filetypes**
+- auto
+- csv
+- tsv
+- xls
+- xlsx
+- json
+- jsonl
+- xml
+- huggingfacehub
 
 ### **Dataset processors**
 In the CLI you also have to define a processor which will be a function that will process your selected dataset files into a unified data format. Unless you leave it on default, which takes your input dataset (that should constitute of a single file) and parses it using '--text_field' and '--label_field' (user-specified or the default) CLI arguments.

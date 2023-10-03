@@ -8,7 +8,7 @@ import random
 import time
 import os
 from tqdm import tqdm
-from methods.utils import load_base_model_and_tokenizer, move_model_to_device, get_clf_results
+from methods.utils import load_base_model_and_tokenizer, move_to_device, get_clf_results
 
 FILL_DICTIONARY = set()
 
@@ -33,7 +33,7 @@ class PertubationBasedExperiment(Experiment):
         print(f"Loading BASE model {self.base_model_name}\n")
         self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
             self.base_model_name, self.cache_dir)
-        move_model_to_device(self.base_model, self.DEVICE) 
+        move_to_device(self.base_model, self.DEVICE) 
         
         mask_filling_model_name = self.config["mask_filling_model_name"]
         cache_dir = self.config["cache_dir"]
@@ -70,7 +70,7 @@ class PertubationBasedExperiment(Experiment):
 
         # perturbation_mode = 'd'
         perturbation_mode = 'z'
-        n_perturbations = 10
+        n_perturbations = self.config["n_perturbations"]
         t1 = time.time()
 
         perturbation_results = self.get_perturbation_results(
@@ -153,21 +153,19 @@ class PertubationBasedExperiment(Experiment):
                 test_predictions.append(res['score'])
 
             x_train = train_predictions
-            x_train = np.expand_dims(x_train, axis=-1)
+            #x_train = np.expand_dims(x_train, axis=-1)
             y_train = [_['label'] for _ in results['train']]
 
             x_test = test_predictions
-            x_test = np.expand_dims(x_test, axis=-1)
+            #x_test = np.expand_dims(x_test, axis=-1)
             y_test = [_['label'] for _ in results['test']]
-
-            name = f'perturbation_{n_perturbations}_{criterion}'
 
             train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test, config=self.config)
             acc_train, precision_train, recall_train, f1_train, auc_train = train_res
             acc_test, precision_test, recall_test, f1_test, auc_test = test_res
 
-            print(f"{name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
-            print(f"{name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
+            print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
+            print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
 
             return {
                 'name': self.name,
@@ -192,8 +190,7 @@ class PertubationBasedExperiment(Experiment):
                     'pct_words_masked': args["pct_words_masked"],
                     'span_length': span_length,
                     'n_perturbations': n_perturbations,
-                },
-                'raw_results': results
+                }
             }
         
 

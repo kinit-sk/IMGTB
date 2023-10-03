@@ -84,7 +84,7 @@ def analyze_text_lengths(results_list, save_path, is_interactive: bool):
                                   "machine_prob": detector["machine_prob"]["test"]})
       for length_group in lengths_groups:
         temp = detector_data[(detector_data['text'].str.len() >= length_group[0]) & (detector_data['text'].str.len() < length_group[1])]
-        if len(temp.label.unique()) < 2: continue
+        if len(temp) == 0: continue
         cr = classification_report(temp['label'], temp['prediction'], labels=[0, 1], target_names=['machine', 'human'], digits=4, output_dict=True, zero_division=0)
         results = pd.concat([results, pd.DataFrame({'Length group': str(length_group), 'Detector': detector["name"], 'F1-score': cr['weighted avg']['f1-score'], 'Human samples': cr['human']['support'], 'Machine samples': cr['machine']['support']}, index=[0])], copy=False, ignore_index=True) 
 
@@ -213,6 +213,10 @@ def analyze_false_positives(results_list, save_path, is_interactive: bool):
       
       counts = dict(Counter(list(pred_data_positive["confusion_label"])))
       counts_sum = sum(counts.values())
+      if counts_sum == 0:
+        print("Cannot perform false positives analysis on data with no negative samples. Exiting...")
+        return
+      
       results = pd.concat([results, pd.DataFrame(
         {"Detector": detector["name"], 
          "TN": counts.get("TN", 0) / counts_sum * 100,
@@ -268,6 +272,10 @@ def analyze_false_negatives(results_list, save_path, is_interactive: bool):
       
       counts = dict(Counter(list(pred_data_positive["confusion_label"])))
       counts_sum = sum(counts.values())
+      if counts_sum == 0:
+        print("Cannot perform false negatives analysis on data with no positive samples. Exiting...")
+        return
+      
       results = pd.concat([results, pd.DataFrame(
         {"Detector": detector["name"], 
          "FN": counts.get("FN", 0) / counts_sum * 100,
@@ -297,8 +305,9 @@ FULL_ANALYSIS=[globals()[key] for key in globals() if key.startswith("analyze")]
 
 sns.set() 
 
-def run_full_analysis(results, methods, save_path, is_interactive: bool):
+def run_full_analysis(results, methods, save_path, is_interactive: bool):  
   method_names = list(map(lambda method: method["name"], methods))
+  results = make_method_names_unique(results)
   for fn in FULL_ANALYSIS:
     if fn.__name__ not in method_names and method_names[0] != "all":
       continue
@@ -312,7 +321,7 @@ def run_full_analysis(results, methods, save_path, is_interactive: bool):
 def run_full_analysis_from_file(filepath: str, save_path: str):
   with open(filepath, "r") as file:
     results = json.load(file, parse_float=True)
-    run_full_analysis(results, save_path)
+    run_full_analysis(results, save_path, is_interactive=True)
 
 
 def list_available_analysis_methods():
@@ -322,9 +331,20 @@ def list_available_analysis_methods():
   print("pred_prob_error_hist     ...   For each method evaluated on a given dataset, show a histogram of errors in prediction (how far was the prediction from true label, how often)")
   print("analyze_false_positives  ...   Analyze false positive rates")
   print("analyze_false_negatives  ...   Analyze false negative rates")
-  
+
+def make_method_names_unique(results):
+  for _, dataset in results.items():
+    name_counts = dict()
+    for method in dataset:
+      count = name_counts.get(method["name"], 0)
+      name_counts[method["name"]] = count + 1
+      if name_counts[method["name"]] > 1:
+        method["name"] = method["name"] + str(name_counts[method["name"]])
+  return results
+
 if __name__ == '__main__':
   if sys.argv != 3:
     print("Please, specify file to run the analysis on and a save path to store analysis results. Aborting...")
     exit(1)
   run_full_analysis_from_file(sys.args[1], sys.args[2])
+  

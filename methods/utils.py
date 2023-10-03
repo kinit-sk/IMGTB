@@ -12,6 +12,7 @@ from functools import wraps
 import random
 import torch
 import torch.nn.functional as F
+import traceback
 
 CLF_MODELS = {
     "LogisticRegression": LogisticRegression,
@@ -91,20 +92,28 @@ def load_base_model_and_tokenizer(name, cache_dir):
     return base_model, base_tokenizer
 
 
-def move_model_to_device(base_model, DEVICE):
-    print(f'MOVING BASE MODEL TO {DEVICE}...', end='', flush=True)
+def move_to_device(object, DEVICE):
+    DEFAULT_DEVICE = "cpu"
+    
+    print(f'Moving object {object.__class__.__name__} to {DEVICE}...')
     start = time.time()
-
-    base_model.to(DEVICE)
-    print(f'DONE ({time.time() - start:.2f}s)')
+    
+    try:
+        object.to(DEVICE)
+    except:
+        print(f'Moving to default device {DEFAULT_DEVICE}. Failed to move to {DEVICE} because of the below exception:', file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
+        object.to(DEFAULT_DEVICE)
+    
+    print(f'Done ({time.time() - start:.2f}s)')
 
 
 def cal_metrics(label, pred_label, pred_posteriors):
     if len(set(label)) < 2:
         acc = accuracy_score(label, pred_label)
-        precision = precision_score(label, pred_label)
-        recall = recall_score(label, pred_label)
-        f1 = f1_score(label, pred_label)
+        precision = precision_score(label, pred_label, average="macro")
+        recall = recall_score(label, pred_label, average="macro")
+        f1 = f1_score(label, pred_label, average="macro")
         print("Cannot evaluate AUC metric on data with less than 2 labels. Setting AUC to 0...")
         auc = 0
     elif len(set(label)) == 2:
@@ -154,14 +163,17 @@ def get_clf_results(x_train, y_train, x_test, y_test, config):
 def get_ll(text, base_model, base_tokenizer, DEVICE):
     with torch.no_grad():
         tokenized = base_tokenizer(
-            text, padding=True, truncation=True, max_length=512, return_tensors="pt").to(DEVICE)
+            text, padding=True, truncation=True, max_length=512, return_tensors="pt")
+        move_to_device(tokenized, DEVICE)
         labels = tokenized.input_ids
         return -base_model(**tokenized, labels=labels).loss.item()
         # https://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py#L1317
 
 def get_rank(text, model, tokenizer, DEVICE, log=False):
     with torch.no_grad():
-        tokenized = tokenizer(text, return_tensors="pt").to(DEVICE)
+        tokenized = tokenizer(
+            text, padding=True, truncation=True, max_length=512, return_tensors="pt")
+        move_to_device(tokenized, DEVICE)
         logits = model(**tokenized).logits[:, :-1]
         labels = tokenized.input_ids[:, 1:]
 
@@ -185,14 +197,18 @@ def get_rank(text, model, tokenizer, DEVICE, log=False):
 
 def get_entropy(text, model, tokenizer, DEVICE):
     with torch.no_grad():
-        tokenized = tokenizer(text, return_tensors="pt").to(DEVICE)
+        tokenized = tokenizer(
+            text, padding=True, truncation=True, max_length=512, return_tensors="pt")
+        move_to_device(tokenized, DEVICE)
         logits = model(**tokenized).logits[:, :-1]
         neg_entropy = F.softmax(logits, dim=-1) * F.log_softmax(logits, dim=-1)
         return -neg_entropy.sum(-1).mean().item()
 
 def get_llm_deviation(text, model, tokenizer, DEVICE):
     with torch.no_grad():
-        tokenized = tokenizer(text, return_tensors="pt").to(DEVICE)
+        tokenized = tokenizer(
+            text, padding=True, truncation=True, max_length=512, return_tensors="pt")
+        move_to_device(tokenized, DEVICE)
         logits = model(**tokenized).logits[:, :-1]
         labels = tokenized.input_ids[:, 1:]
 

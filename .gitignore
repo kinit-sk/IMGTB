@@ -29,5 +29,5 @@ results/*
 # Config files
 *.yml
 *.yaml
-!environment.yml
+!environment.yaml
 !example_config.yaml

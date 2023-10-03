@@ -93,7 +93,7 @@ def read_file_to_pandas(filepath: str, filetype="auto", *args):
         case "xml":
             data[Path(filepath).stem] = pd.read_xml(filepath)
         case "huggingfacehub":
-            data[Path(filepath).stem] = datasets.load_dataset(filepath).to_pandas()
+            data[Path(filepath).stem] = datasets.load_dataset(filepath) #.to_pandas()
         case _:
             return None
     

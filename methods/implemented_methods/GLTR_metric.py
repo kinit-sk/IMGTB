@@ -1,5 +1,5 @@
 from methods.abstract_methods.metric_based_experiment import MetricBasedExperiment
-from methods.utils import timeit, get_clf_results, load_base_model_and_tokenizer, move_model_to_device
+from methods.utils import timeit, get_clf_results, load_base_model_and_tokenizer, move_to_device
 import torch
 import numpy as np
 
@@ -8,7 +8,7 @@ class GLTRMetric(MetricBasedExperiment):
     def __init__(self, data, config):
         super().__init__(data, self.__class__.__name__, config)
         self.base_model_name = config["base_model_name"]
-        self.clf_algo_for_threshold = config["clf_algo_for_threshold"]
+        self.config = config
     
     def criterion_fn(self, text: str):
         with torch.no_grad():
@@ -42,7 +42,7 @@ class GLTRMetric(MetricBasedExperiment):
             if res.sum() > 0:
                 res = res / res.sum()
 
-            return np.array([res])
+            return res
     
     @timeit
     def run(self):
@@ -50,7 +50,7 @@ class GLTRMetric(MetricBasedExperiment):
         print(f"Loading BASE model {self.base_model_name}\n")
         self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
             self.base_model_name, self.cache_dir)
-        move_model_to_device(self.base_model, self.DEVICE)
+        move_to_device(self.base_model, self.DEVICE)
         
         torch.manual_seed(0)
         np.random.seed(0)
@@ -68,8 +68,8 @@ class GLTRMetric(MetricBasedExperiment):
                         for idx in range(len(test_text))]
         x_test = np.array(test_criterion)
         y_test = test_label
-
-        train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test, self.clf_algo_for_threshold)
+        
+        train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test, self.config)
 
         acc_train, precision_train, recall_train, f1_train, auc_train = train_res
         acc_test, precision_test, recall_test, f1_test, auc_test = test_res

@@ -75,17 +75,20 @@ def run_benchmark(dataset_dict, config):
     for dataset_name, data in dataset_dict.items():
         print_w_sep_line(f"Running experiments on {dataset_name} dataset:\n", config["global"]["interactive"])    
         outputs[dataset_name] = []
-        
-        if config["methods"]["list"][0]["name"] == "all":
-            outputs[dataset_name] = run_all_available(data, config["methods"]["list"][0], available_experiments)
-            continue
             
         for method_config in config["methods"]["list"]:
+            
+            if method_config["name"] == "all":
+                outputs[dataset_name].extend(run_all_available(data, method_config, available_experiments))
+                continue
+            
             try:
                 results = run_experiment(data, method_config, method_config["name"], available_experiments)
             except Exception:
-                print(f"Experiment {method_config['name']} failed due to below reasons. Skipping and continuing with the next experiment.")
-                print(traceback.format_exc())
+                print(f"Experiment {method_config['name']} failed. Skipping and continuing with the next experiment.")
+                # Print detailed error message to stderr
+                print(f"Experiment {method_config['name']} failed due to below reasons:", file=sys.stderr)
+                print(traceback.format_exc(), file=sys.stderr)
                 continue
             
             outputs[dataset_name].append(results)
@@ -98,8 +101,10 @@ def run_all_available(data, method_config, available_experiments):
         try:
             results.append(experiment(data=data, config=method_config).run())
         except Exception:
-            print(f"Experiment {method_config['name']} failed due to below reasons. Skipping and continuing with the next experiment.")
-            print(traceback.format_exc())
+            print(f"Experiment {method_config['name']} failed. Skipping and continuing with the next experiment.")
+            # Print detailed error message to stderr
+            print(f"Experiment {method_config['name']} failed due to below reasons:", file=sys.stderr)
+            print(traceback.format_exc(), file=sys.stderr)
             continue
     return results
 
@@ -112,7 +117,8 @@ def run_experiment(data, method_config, method_name, available_experiments):
     try: # Check if method is model name from HuggingFace Hub for sequence classification
         return SupervisedExperiment(data, method_name, method_name, method_config).run()
     except:
-        print(traceback.format_exc())
+        print(f"Tried to run method {method_name} as supervised. Failed due to:", file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
         pass
     
     raise ValueError(f"Unknown method: {method_name}")
@@ -137,7 +143,6 @@ def scan_for_detection_methods():
                 exp_class_list.append(obj)
 
     return exp_class_list
-
 
 def log_whole_experiment(config, outputs):
     """Log all experiment data as a whole by current time"""
@@ -180,9 +185,10 @@ def save_method_dataset_combination_results(methods_config, outputs):
 
 
 def print_w_sep_line(text: str, is_interactive=True) -> None:
-    width = 80
-    if is_interactive:
-        width = os.get_terminal_size().columns 
+    try:
+        width = os.get_terminal_size().columns
+    except:
+        width = 80
     print('-' * width)
     print(text)
     

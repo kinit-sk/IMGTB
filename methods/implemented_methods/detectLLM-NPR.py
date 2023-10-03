@@ -23,9 +23,9 @@ class DetectLLM_NPR(PertubationBasedExperiment):
                 f"Number of unique perturbed original texts: {len(set(text))}")
             print(f"Original text: {text}")
         
-        return np.mean(perturbed_ranks) / \
+        return np.array([np.mean(perturbed_ranks) / \
                get_rank(text, base_model, base_tokenizer, DEVICE, log=True) / \
-               ranks_std
+               ranks_std])
 
 def get_ranks(texts, model, tokenizer, DEVICE, log=False):
     return [get_rank(text, model, tokenizer, DEVICE, log) for text in texts]

@@ -26,9 +26,9 @@ class DetectGPT(PertubationBasedExperiment):
                 f"Number of unique perturbed original texts: {len(set(text))}")
             print(f"Original text: {text}")
             
-        return (get_ll(text, base_model, base_tokenizer, DEVICE) - \
+        return np.array([(get_ll(text, base_model, base_tokenizer, DEVICE) - \
                 np.mean(get_lls(perturbed_texts, base_model, base_tokenizer, DEVICE))) / \
-                lls_std
+                lls_std])
                    
 
 def get_lls(texts, model, tokenizer, DEVICE):

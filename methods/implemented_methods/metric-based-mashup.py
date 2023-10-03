@@ -10,7 +10,7 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.metrics import F1Score, Accuracy, Precision, Recall, AUC
 from tensorflow.keras.losses import BinaryCrossentropy
 from methods.abstract_methods.experiment import Experiment
-from methods.utils import get_rank, get_ll, get_entropy, cal_metrics, timeit, load_base_model_and_tokenizer, move_model_to_device
+from methods.utils import get_rank, get_ll, get_entropy, cal_metrics, timeit, load_base_model_and_tokenizer, move_to_device
 
 class MetricBasedMashup(Experiment):
     
@@ -35,7 +35,7 @@ class MetricBasedMashup(Experiment):
         print(f"Loading BASE model {self.base_model_name}\n")
         self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
             self.base_model_name, self.cache_dir)
-        move_model_to_device(self.base_model, self.DEVICE)
+        move_to_device(self.base_model, self.DEVICE)
         
         torch.manual_seed(0)
         np.random.seed(0)
