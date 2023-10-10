@@ -38,9 +38,9 @@ def load_multiple_from_file(datasets_params, is_interactive: bool):
                                                            dataset_params["label_field"], 
                                                            dataset_params["human_label"], 
                                                            dataset_params["dataset_other"])
-            unified_data_dict[dataset_name] = _data_to_unified(human_texts, machine_texts)
+            unified_data_dict[dataset_name] = _data_to_unified(human_texts, machine_texts, dataset_params)
         else:
-            raise ValueError(f'Unknown dataset processor: {processor}')
+            raise ValueError(f'Unknown dataset processor: {dataset_processor}')
     
     return unified_data_dict
 
@@ -106,7 +106,7 @@ def read_file_to_pandas(filepath: str, filetype="auto", *args):
 def process_default(data: Dict[str, pd.DataFrame], text_field, label_field, human_label, *args) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
     if text_field not in data.columns or label_field not in data.columns:
-        raise ValueError("Could not parse dataset. Please, correctly specify dataset specifications or define your own custom function for parsing.")
+        raise ValueError("Could not parse dataset. Text and label fields are not specified correctly. Please, correctly specify dataset specifications or define your own custom function for parsing.")
     human_texts = data[text_field].where(data[label_field].astype("string") == human_label).dropna().reset_index(drop=True)
     machine_texts = data[text_field].where(data[label_field].astype("string") != human_label).dropna().reset_index(drop=True)
     return human_texts, machine_texts
@@ -150,18 +150,21 @@ def process_test_small(data: Dict[str, pd.DataFrame], *args) -> Tuple[pd.Series,
 #                         UTILS                           #
 ###########################################################
 
-def _data_to_unified(human_texts: pd.Series, machine_texts: pd.Series) \
+def _data_to_unified(human_texts: pd.Series, machine_texts: pd.Series, dataset_params) \
                 -> Dict[str, Dict[str, Union[List[str], List[int]]]]:
 
     texts = pd.concat([human_texts, machine_texts], axis=0, names=["text"]).reset_index(drop=True)
     labels = pd.Series([0]*len(human_texts) + [1]*len(machine_texts))
-    data = pd.DataFrame(data={"text": texts, "label": labels}).reset_index(drop=True)
+    data = pd.DataFrame(data={"text": texts, "label": labels}).reset_index(drop=True)        
+
+    if dataset_params["test_size"] == 1:
+        return {"train": {"text": [], "label": []}, "test": data.to_dict(orient="list")}
     
     # Try to stratify, if possible
     try:
-        data_train, data_test = train_test_split(data, test_size=0.2, random_state=42, shuffle=True, stratify=data["label"])
+        data_train, data_test = train_test_split(data, test_size=dataset_params["test_size"], random_state=42, shuffle=dataset_params["shuffle"], stratify=data["label"])
     except ValueError:
-        data_train, data_test = train_test_split(data, test_size=0.2, random_state=42, shuffle=True, stratify=None)
+        data_train, data_test = train_test_split(data, test_size=dataset_params["test_size"], random_state=42, shuffle=dataset_params["shuffle"], stratify=None)
 
     return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
 

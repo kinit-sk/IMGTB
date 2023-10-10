@@ -14,6 +14,10 @@ data:
     label_field: label
     human_label: "0"
     dataset_other: null
+    test_size: 1
+    train_split: None
+    test_split: None
+    shuffle: True
   list: []
 
 methods:
