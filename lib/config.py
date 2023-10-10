@@ -30,6 +30,7 @@ def get_config():
         return _from_yaml_config(cmd_args["from_config"])
     return _transform_cmd_args_to_common(cmd_args)
 
+
 def _parse_cmd_args():
     parser = argparse.ArgumentParser()
 
@@ -167,60 +168,38 @@ class _DatasetAppendAction(argparse.Action):
         items.append(_parse_dataset_args_by_length(values))
         setattr(namespace, self.dest, items)
 
+def _crawl_config_and_override_by_args(config, args):
+    for key in config.keys():
+        if isinstance(config[key], dict):
+            _crawl_config_and_override_by_args(config[key], args)
+        elif key in args:
+            config[key] = args[key]
 
 def _transform_cmd_args_to_common(raw_cmd_args):
-    methods_config_global = { key: raw_cmd_args[key]
-                for key in ["batch_size", 
-                            "base_model_name", 
-                            "mask_filling_model_name", 
-                            "DEVICE",
-                            "cache_dir", 
-                            "pct_words_masked", 
-                            "span_length", 
-                            "n_perturbations", 
-                            "n_perturbation_rounds",
-                            "chunk_size",
-                            "n_similarity_samples",
-                            "int8",
-                            "half",
-                            "do_top_k",
-                            "top_p",
-                            "buffer_size",
-                            "mask_top_p",
-                            "random_fills",
-                            "random_fills_tokens",
-                            "gptzero_key"]
-            }
-    methods_config_global.update({"clf_algo_for_threshold": {"name": raw_cmd_args["clf_algo_for_threshold"]}})
-    transformed = {
-        "global": {
-            "interactive": raw_cmd_args["interactive"],
-            "name": raw_cmd_args["name"],
-            "list_methods": raw_cmd_args["list_methods"],
-            "list_datasets": raw_cmd_args["list_datasets"],
-            "list_analysis_methods": raw_cmd_args["list_analysis_methods"]
-        },
-        "data": {
-            "global": {},
-            "list": [ {"filepath": dataset[0],
-                       "filetype": dataset[1],
-                       "processor": dataset[2],
-                       "text_field": dataset[3],
-                       "label_field": dataset[4],
-                       "human_label": dataset[5],
-                       "dataset_other": dataset[6]
-                       } 
-                     for dataset in raw_cmd_args["dataset"]]
-        },
-        "methods":{
-            "global": methods_config_global,
-            
-            "list": [{"name": method} for method in raw_cmd_args["methods"]]
-        },
-        "analysis": [{"name": method} for method in raw_cmd_args["analysis_methods"]]
-            
-    }
-    return _merge_global_with_individual_config(transformed)
+    with open(YAML_CONFIG_DEFAULT_FILEPATH, "r") as f:
+        config = yaml.safe_load(f)
+    
+    _crawl_config_and_override_by_args(config, raw_cmd_args)
+    
+    dataset_list = [ {"filepath": dataset[0],
+                      "filetype": dataset[1],
+                      "processor": dataset[2],
+                      "text_field": dataset[3],
+                      "label_field": dataset[4],
+                      "human_label": dataset[5],
+                      "dataset_other": dataset[6]
+                      } 
+                    for dataset in raw_cmd_args["dataset"]]
+    
+    config["data"]["list"] = dataset_list
+    config["analysis"] = [{"name": method} for method in raw_cmd_args["analysis_methods"]]
+
+    config["methods"]["list"] = [{"name": method} for method in raw_cmd_args["methods"]]
+    #Hotfix
+    config["methods"]["global"].update({"clf_algo_for_threshold": {"name": raw_cmd_args["clf_algo_for_threshold"]}})
+
+    return _merge_global_with_individual_config(config)
+    
     
 def _merge_global_with_individual_config(config):
     """Apply global config to each dataset/method in user-specified lists"""
@@ -239,12 +218,12 @@ def _merge_global_with_individual_config(config):
     return config
 
     
-
 def _merge_yaml_config_with_default(config):
     """Merges global params of default and user-specified yaml config"""
     with open(YAML_CONFIG_DEFAULT_FILEPATH, "r") as f:
         default = yaml.safe_load(f)
         return _deep_update(default, config)
+
 
 def _deep_update(base, update):
     for key, value in update.items():
@@ -253,6 +232,7 @@ def _deep_update(base, update):
         else:
             base[key] = value
     return base           
+
 
 def _from_yaml_config(filepath: str):
     with open(filepath, "r") as f:
