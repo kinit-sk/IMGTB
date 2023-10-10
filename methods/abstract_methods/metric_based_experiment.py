@@ -4,7 +4,7 @@ import os
 import torch
 import torch.nn.functional as F
 import time
-from methods.utils import timeit, get_clf_results, load_base_model_and_tokenizer, move_to_device
+from methods.utils import timeit, get_clf_results, load_base_model_and_tokenizer, move_model_to_device
 from methods.abstract_methods.experiment import Experiment
 
 class MetricBasedExperiment(Experiment):
@@ -37,10 +37,14 @@ class MetricBasedExperiment(Experiment):
             os.makedirs(self.cache_dir)
         print(f"Using cache dir {self.cache_dir}")
         
+        if "cuda" in self.DEVICE and not torch.cuda.is_available():
+            print(f'Setting default device to cpu. Cuda is not available.')
+            self.DEVICE = "cpu"
+
         print(f"Loading BASE model {self.base_model_name}\n")
         self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
             self.base_model_name, self.cache_dir)
-        move_to_device(self.base_model, self.DEVICE)
+        move_model_to_device(self.base_model, self.DEVICE)
             
         torch.manual_seed(0)
         np.random.seed(0)

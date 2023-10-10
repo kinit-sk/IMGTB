@@ -9,6 +9,6 @@ class DetectLLM_LLR(MetricBasedExperiment):
         self.config = config
     
     def criterion_fn(self, text: str):
-       return np.array([get_ll(text, self.base_model, self.base_tokenizer, self.config["DEVICE"]) \
-              / get_rank(text, self.base_model, self.base_tokenizer, self.config["DEVICE"], log=True)])
+       return np.array([get_ll(text, self.base_model, self.base_tokenizer, self.DEVICE) \
+              / get_rank(text, self.base_model, self.base_tokenizer, self.DEVICE, log=True)])
 

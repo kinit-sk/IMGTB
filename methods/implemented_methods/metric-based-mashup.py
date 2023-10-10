@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import os
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -10,7 +11,7 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.metrics import F1Score, Accuracy, Precision, Recall, AUC
 from tensorflow.keras.losses import BinaryCrossentropy
 from methods.abstract_methods.experiment import Experiment
-from methods.utils import get_rank, get_ll, get_entropy, cal_metrics, timeit, load_base_model_and_tokenizer, move_to_device
+from methods.utils import get_rank, get_ll, get_entropy, cal_metrics, timeit, load_base_model_and_tokenizer, move_model_to_device
 
 class MetricBasedMashup(Experiment):
     
@@ -32,10 +33,17 @@ class MetricBasedMashup(Experiment):
     @timeit
     def run(self):
         
+        if not os.path.exists(self.cache_dir):
+            os.makedirs(self.cache_dir)
+            print(f"Using cache dir {self.cache_dir}")
+        if "cuda" in self.DEVICE and not torch.cuda.is_available():
+            print(f'Setting default device to cpu. Cuda is not available.')
+            self.DEVICE = "cpu"
+            
         print(f"Loading BASE model {self.base_model_name}\n")
         self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
             self.base_model_name, self.cache_dir)
-        move_to_device(self.base_model, self.DEVICE)
+        move_model_to_device(self.base_model, self.DEVICE)
         
         torch.manual_seed(0)
         np.random.seed(0)

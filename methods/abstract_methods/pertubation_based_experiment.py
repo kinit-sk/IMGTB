@@ -8,7 +8,7 @@ import random
 import time
 import os
 from tqdm import tqdm
-from methods.utils import load_base_model_and_tokenizer, move_to_device, get_clf_results
+from methods.utils import load_base_model_and_tokenizer, move_model_to_device, get_clf_results
 
 FILL_DICTIONARY = set()
 
@@ -26,14 +26,18 @@ class PertubationBasedExperiment(Experiment):
         raise NotImplementedError("Attempted to call an abstract method.")
      
      def run(self):
+        
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
-        print(f"Using cache dir {self.cache_dir}")
+            print(f"Using cache dir {self.cache_dir}")
+        if "cuda" in self.DEVICE and not torch.cuda.is_available():
+            print(f'Setting default device to cpu. Cuda is not available.')
+            self.DEVICE = "cpu"
         
         print(f"Loading BASE model {self.base_model_name}\n")
         self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
             self.base_model_name, self.cache_dir)
-        move_to_device(self.base_model, self.DEVICE) 
+        move_model_to_device(self.base_model, self.DEVICE) 
         
         mask_filling_model_name = self.config["mask_filling_model_name"]
         cache_dir = self.config["cache_dir"]
@@ -82,7 +86,7 @@ class PertubationBasedExperiment(Experiment):
         return res
     
      def get_perturbation_results(self, args, data, mask_model, mask_tokenizer, base_model, base_tokenizer, span_length=10, n_perturbations=1):
-        load_mask_model(args, mask_model)
+        load_mask_model(args, mask_model, self.DEVICE)
 
         torch.manual_seed(0)
         np.random.seed(0)
@@ -93,14 +97,14 @@ class PertubationBasedExperiment(Experiment):
         test_label = data['test']['label']
 
         p_train_text = perturb_texts(args, [x for x in train_text for _ in range(
-            n_perturbations)], mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False)
+            n_perturbations)], mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE=self.DEVICE)
         p_test_text = perturb_texts(args, [x for x in test_text for _ in range(
-            n_perturbations)], mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False)
+            n_perturbations)], mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE=self.DEVICE)
 
         for _ in range(args["n_perturbation_rounds"] - 1):
             try:
-                p_train_text, p_test_text = perturb_texts(args, p_train_text, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False), perturb_texts(
-                    args, p_test_text, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False)
+                p_train_text, p_test_text = perturb_texts(args, p_train_text, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE=self.DEVICE), perturb_texts(
+                    args, p_test_text, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE=self.DEVICE)
             except AssertionError:
                 break
 
@@ -132,11 +136,11 @@ class PertubationBasedExperiment(Experiment):
         
         for res in tqdm(train, desc="Computing metrics"):
             res["score"] = self.get_score(res["text"], res["perturbed_text"], base_model,
-                            base_tokenizer, args["DEVICE"])
+                            base_tokenizer, self.DEVICE)
             
         for res in tqdm(test, desc="Computing metrics"):
             res["score"] = self.get_score(res["text"], res["perturbed_text"], base_model,
-                            base_tokenizer, args["DEVICE"])
+                            base_tokenizer, self.DEVICE)
             
         results = {"train": train, "test": test}
         return results
@@ -199,13 +203,13 @@ class PertubationBasedExperiment(Experiment):
 # define regex to match all <extra_id_*> tokens, where * is an integer
 pattern = re.compile(r"<extra_id_\d+>")
 
-def load_mask_model(args, mask_model):
+def load_mask_model(args, mask_model, DEVICE):
     print('MOVING MASK MODEL TO GPU...', end='', flush=True)
     start = time.time()
 
     # base_model.cpu()
     if not args["random_fills"]:
-        mask_model.to(args["DEVICE"])
+        mask_model.to(DEVICE)
     print(f'DONE ({time.time() - start:.2f}s)')
 
 
@@ -288,12 +292,11 @@ def apply_extracted_fills(masked_texts, extracted_fills):
     return texts
 
 
-def perturb_texts_(args, texts, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False):
+def perturb_texts_(args, texts, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE="cpu"):
     span_length = args["span_length"]
     buffer_size = args["buffer_size"]
     mask_top_p = args["mask_top_p"]
     pct = args["pct_words_masked"]
-    DEVICE = args["DEVICE"]
     if not args["random_fills"]:
         masked_texts = [tokenize_and_mask(
             x, span_length, buffer_size, pct, ceil_pct) for x in texts]
@@ -366,10 +369,10 @@ def perturb_texts_(args, texts, mask_model, mask_tokenizer, base_tokenizer, ceil
     return perturbed_texts
 
 
-def perturb_texts(args, texts, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False):
+def perturb_texts(args, texts, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE="cpu"):
 
     outputs = []
     for i in tqdm(range(0, len(texts), args["chunk_size"]), desc="Applying perturbations"):
         outputs.extend(perturb_texts_(args,
-                                      texts[i:i + args["chunk_size"]], mask_model, mask_tokenizer, base_tokenizer, ceil_pct=ceil_pct))
+                                      texts[i:i + args["chunk_size"]], mask_model, mask_tokenizer, base_tokenizer, ceil_pct=ceil_pct, DEVICE=DEVICE))
     return outputs

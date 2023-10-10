@@ -8,7 +8,7 @@ from pathlib import Path
 from inspect import getmembers, getmodule, isclass
 import importlib.util
 import traceback
-
+    
 from lib.dataset_loader import load_multiple_from_file
 from lib.config import get_config
 from methods.abstract_methods.experiment import Experiment
@@ -37,13 +37,12 @@ def main():
     if config["global"]["list_datasets"]:
         print_w_sep_line("Available datasets:\n", config["global"]["interactive"])
         pathlist = Path(DATASETS_PATH).iterdir()
-        for path in pathlist:
-            print(path.stem)
+        for path in pathlist: print(path)
         print_w_sep_line("Finish", config["global"]["interactive"])
         exit(0)
-
+        
     if config["global"]["list_analysis_methods"]:
-        print_w_sep_line("Available analysis methods:\n", config["global"]["interactive"])
+        print_w_sep_line("Available results analysis methods:\n", config["global"]["interactive"])
         list_available_analysis_methods()
         print_w_sep_line("Finish", config["global"]["interactive"])
         exit(0)

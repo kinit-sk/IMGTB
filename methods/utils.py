@@ -1,5 +1,6 @@
 import transformers
 import re
+import sys
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
@@ -92,21 +93,31 @@ def load_base_model_and_tokenizer(name, cache_dir):
     return base_model, base_tokenizer
 
 
-def move_to_device(object, DEVICE):
+def move_model_to_device(model, DEVICE):
     DEFAULT_DEVICE = "cpu"
     
-    print(f'Moving object {object.__class__.__name__} to {DEVICE}...')
+    print(f'Moving model {model.__class__.__name__} to {DEVICE}...')
     start = time.time()
     
     try:
-        object.to(DEVICE)
+        model.to(DEVICE)
     except:
-        print(f'Moving to default device {DEFAULT_DEVICE}. Failed to move to {DEVICE} because of the below exception:', file=sys.stderr)
-        print(traceback.format_exc(), file=sys.stderr)
-        object.to(DEFAULT_DEVICE)
+        print(f'Moving to default device {DEFAULT_DEVICE}. Failed to move to {DEVICE} because of the below exception:')
+        print(traceback.format_exc())
+        model.to(DEFAULT_DEVICE)
     
     print(f'Done ({time.time() - start:.2f}s)')
 
+def move_tensor_to_device(tensor, DEVICE):
+    DEFAULT_DEVICE = "cpu"
+    
+    start = time.time()
+    try:
+        tensor.to(DEVICE)
+    except:
+        print(f'Moving to default device {DEFAULT_DEVICE}. Failed to move to {DEVICE} because of the below exception:', file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
+        tensor.to(DEFAULT_DEVICE)
 
 def cal_metrics(label, pred_label, pred_posteriors):
     if len(set(label)) < 2:
@@ -163,8 +174,7 @@ def get_clf_results(x_train, y_train, x_test, y_test, config):
 def get_ll(text, base_model, base_tokenizer, DEVICE):
     with torch.no_grad():
         tokenized = base_tokenizer(
-            text, padding=True, truncation=True, max_length=512, return_tensors="pt")
-        move_to_device(tokenized, DEVICE)
+            text, padding=True, truncation=True, max_length=512, return_tensors="pt").to(DEVICE)
         labels = tokenized.input_ids
         return -base_model(**tokenized, labels=labels).loss.item()
         # https://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py#L1317
@@ -172,8 +182,7 @@ def get_ll(text, base_model, base_tokenizer, DEVICE):
 def get_rank(text, model, tokenizer, DEVICE, log=False):
     with torch.no_grad():
         tokenized = tokenizer(
-            text, padding=True, truncation=True, max_length=512, return_tensors="pt")
-        move_to_device(tokenized, DEVICE)
+            text, padding=True, truncation=True, max_length=512, return_tensors="pt").to(DEVICE)
         logits = model(**tokenized).logits[:, :-1]
         labels = tokenized.input_ids[:, 1:]
 
@@ -198,8 +207,7 @@ def get_rank(text, model, tokenizer, DEVICE, log=False):
 def get_entropy(text, model, tokenizer, DEVICE):
     with torch.no_grad():
         tokenized = tokenizer(
-            text, padding=True, truncation=True, max_length=512, return_tensors="pt")
-        move_to_device(tokenized, DEVICE)
+            text, padding=True, truncation=True, max_length=512, return_tensors="pt").to(DEVICE)
         logits = model(**tokenized).logits[:, :-1]
         neg_entropy = F.softmax(logits, dim=-1) * F.log_softmax(logits, dim=-1)
         return -neg_entropy.sum(-1).mean().item()
@@ -207,8 +215,7 @@ def get_entropy(text, model, tokenizer, DEVICE):
 def get_llm_deviation(text, model, tokenizer, DEVICE):
     with torch.no_grad():
         tokenized = tokenizer(
-            text, padding=True, truncation=True, max_length=512, return_tensors="pt")
-        move_to_device(tokenized, DEVICE)
+            text, padding=True, truncation=True, max_length=512, return_tensors="pt").to(DEVICE)
         logits = model(**tokenized).logits[:, :-1]
         labels = tokenized.input_ids[:, 1:]
 

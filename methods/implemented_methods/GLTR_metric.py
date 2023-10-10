@@ -1,7 +1,8 @@
 from methods.abstract_methods.metric_based_experiment import MetricBasedExperiment
-from methods.utils import timeit, get_clf_results, load_base_model_and_tokenizer, move_to_device
+from methods.utils import timeit, get_clf_results, load_base_model_and_tokenizer, move_model_to_device
 import torch
 import numpy as np
+import os
 
 
 class GLTRMetric(MetricBasedExperiment):
@@ -47,10 +48,17 @@ class GLTRMetric(MetricBasedExperiment):
     @timeit
     def run(self):
         
+        if not os.path.exists(self.cache_dir):
+            os.makedirs(self.cache_dir)
+            print(f"Using cache dir {self.cache_dir}")
+        if "cuda" in self.DEVICE and not torch.cuda.is_available():
+            print(f'Setting default device to cpu. Cuda is not available.')
+            self.DEVICE = "cpu"
+        
         print(f"Loading BASE model {self.base_model_name}\n")
         self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
             self.base_model_name, self.cache_dir)
-        move_to_device(self.base_model, self.DEVICE)
+        move_model_to_device(self.base_model, self.DEVICE)
         
         torch.manual_seed(0)
         np.random.seed(0)

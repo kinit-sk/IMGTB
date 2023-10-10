@@ -23,7 +23,7 @@ class CustomDataset(torch.utils.data.Dataset):
         return len(self.labels)
 
 class SupervisedExperiment(Experiment):
-
+    
     def __init__(self, data, name, model: str, config, pos_bit=0, finetune=False, num_labels=2, epochs=3):
         super().__init__(data, name)
         self.model = model
@@ -37,9 +37,13 @@ class SupervisedExperiment(Experiment):
     
     @timeit
     def run(self):
+        
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
-        print(f"Using cache dir {self.cache_dir}")
+            print(f"Using cache dir {self.cache_dir}")
+        if "cuda" in self.DEVICE and not torch.cuda.is_available():
+            print(f'Setting default device to cpu. Cuda is not available.')
+            self.DEVICE = "cpu"
         
         print(f'Beginning supervised evaluation with {self.model}...')
         detector = transformers.AutoModelForSequenceClassification.from_pretrained(
@@ -120,6 +124,7 @@ def get_supervised_model_prediction(model, tokenizer, data, batch_size, DEVICE, 
                                    max_length=512, return_tensors="pt").to(DEVICE)
             preds.extend(model(**batch_data).logits.softmax(-1)
                          [:, pos_bit].tolist())
+            print(model(**batch_data))
     return preds
 
 
