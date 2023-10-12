@@ -122,11 +122,24 @@ def process_default(data: Dict[str, pd.DataFrame], config) -> pd.DataFrame:
 
     return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
 
-    
+
+def add_labels_to_text_only_huggingface(dataset: Union[datasets.Dataset, datasets.DatasetDict], 
+                                        splits: List[str], 
+                                        label: str) -> Union[datasets.Dataset, datasets.DatasetDict]:
+    if isinstance(dataset, datasets.Dataset):
+        dataset.add_columns("label", [label]*dataset.num_rows)
+    elif isinstance(dataset, datasets.DatasetDict):
+        for split in splits:
+            if split is not None:
+                dataset[split].add_columns("label", [label]*dataset[split].num_rows)
+    return dataset
 
 def process_huggingfacehub(data, config):
+    HUMAN_LABEL = 0
+    MACHINE_LABEL = 1
     data = list(data.values())[0]
-    if config["train_split"] not in data.column_names.keys() or \
+    if (config["train_split"] is not None and \
+        config["train_split"] not in data.column_names.keys()) or \
        config["test_split"] not in data.column_names.keys() or \
        config["text_field"] not in data.column_names[config["train_split"]] or \
        config["label_field"] not in data.column_names[config["train_split"]] or \
@@ -136,6 +149,25 @@ def process_huggingfacehub(data, config):
                          "Splits, text or label fields are not specified correctly."
                          "Please, correctly specify dataset specifications or" 
                          "define your own custom function for parsing.")
+    
+    if config["processor"] == "human_only":
+        data = add_labels_to_text_only_huggingface(data, [config["train_split"], config["test_split"]], HUMAN_LABEL)
+    if config["processor"] == "machine_only":
+        data = add_labels_to_text_only_huggingface(data, [config["train_split"], config["test_split"]], MACHINE_LABEL)
+    
+    if config["test_size"] == 1 or config["train_split"] is None:
+        return {"train": {"text": [], "label": []}, "test": data[config["test_split"]].to_dict()}
+    
+    if isinstance(data, datasets.Dataset):
+        # Try to stratify, if possible
+        try:
+            data_train, data_test = train_test_split(data.to_pandas(), test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=data["label"])
+        except ValueError:
+            print(f"Could not stratify train-test split for dataset {config['filepath']}. Continuing without...")
+            data_train, data_test = train_test_split(data.to_pandas(), test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=None)
+        
+        return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
+
         
     return {"train": data[config["train_split"]].to_dict(), "test": data[config["test_split"]].to_dict()}
 
@@ -143,7 +175,9 @@ def process_huggingfacehub(data, config):
 
 def process_human_only(data, config):
     HUMAN_LABEL = 0
-    if config["text_field"] not in data.columns
+    if config["filetype"] == "huggingfacehub":
+        return process_huggingfacehub(data, config)
+    if config["text_field"] not in data.columns:
         raise ValueError("Could not parse dataset."
                          "Text field is not specified correctly."
                          "Please, correctly specify dataset specifications or" 
@@ -168,6 +202,8 @@ def process_human_only(data, config):
 
 def process_machine_only(data, config):
     MACHINE_LABEL = 1
+    if config["filetype"] == "huggingfacehub":
+        return process_huggingfacehub(data, config)
     if config["text_field"] not in data.columns
         raise ValueError("Could not parse dataset."
                          "Text field is not specified correctly."
@@ -238,7 +274,7 @@ def _process_spaces(text):
         ' !', '!').replace(
         ' ;', ';').replace(
         ' \'', '\'').replace(
-        ' ’ ', '\'').replace(
+        ' ’ ', '\'').resmallplace(
         ' :', ':').replace(
         '<newline>', '\n').replace(
         '`` ', '"').replace(

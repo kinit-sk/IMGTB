@@ -1,0 +1,82 @@
+# This config tries to run all possible combinations of the framework features to discover any possible errors
+---
+global: 
+  interactive: true
+  name: framework_testing_run
+  list_methods: false
+  list_datasets: false
+  list_analysis_methods: false
+
+data:
+  global:
+    filepath: non_valid_path_to_be_overwritten
+  list:
+  - filepath: tests/datasets/test_edge_case_label_dist
+  - filepath: tests/datasets/test_human_only_text_label.h
+    human_label: human
+  - filepath: tests/datasets/test_machine_only.
+  - filepath: tests/datasets/test_mix_labels.csv
+  - filepath: tests/datasets/test_mix_labels.json
+  - filepath: tests/datasets/test_mix_labels.jsonl
+  - filepath: tests/datasets/test_mix_labels.tsv
+  - filepath: tests/datasets/test_mix_labels.xls
+  - filepath: tests/datasets/test_mix_labels.xlsx
+  - filepath: tests/datasets/test_mix_labels.xml
+  - filepath: tests/datasets/test_text_only.csv
+    processor: machine_only
+  - filepath: truthful_qa
+    filetype: huggingfacehub
+    processor: human_only
+    text_field: best_answer
+  - filepath: taln-ls2n/semeval-2010-pre
+    filetype: huggingfacehub
+    processor: machine_only
+    text_field: abstract
+    train_split: train
+    test_split: test
+  - filepath: taln-ls2n/semeval-2010-pre
+    filetype: huggingfacehub
+    processor: machine_only
+    text_field: abstract
+    train_split: null
+    test_size: 1
+    test_split: test
+  - filepath: fake-news-UFG/FakeNewsSet
+    filetype: huggingfacehub
+    processor: default
+    text_field: title
+    label_field: label
+    human_label: 1
+    test_size: 0.5
+
+methods:
+  global:
+    name: non_valid_name_to_be_overwritten
+  list:
+  - name: all
+    base_model_name: prajjwal1/bert-tiny
+    mask_filling_model_name: google/t5-efficient-tiny
+  - name: EntropyMetric
+    base_model_name: prajjwal1/bert-tiny
+    mask_filling_model_name: google/t5-efficient-tiny
+    DEVICE: cpu
+    cache_dir: .cache2
+  - name: Elron/bleurt-tiny-128
+    DEVICE: cuda
+  - name: EntropyMetric
+    base_model_name: prajjwal1/bert-tiny
+    mask_filling_model_name: google/t5-efficient-tiny
+    DEVICE: cuda
+    clf_algo_for_threshold:
+      name: MLPClassifier
+      hidden_layers: [64, 32, 16]
+  - name: RankMetric
+    base_model_name: Elron/bleurt-tiny-128
+    mask_filling_model_name: google/t5-efficient-tiny-ff2000
+  - name: tests/tiny-random-LlamaForSeqClass
+
+
+analysis:
+  - name: all
+  
+...
