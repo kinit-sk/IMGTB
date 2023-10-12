@@ -1,4 +1,3 @@
-import argparse
 import datetime
 from itertools import zip_longest
 import os
@@ -8,7 +7,7 @@ from pathlib import Path
 from inspect import getmembers, getmodule, isclass
 import importlib.util
 import traceback
-    
+ 
 from lib.dataset_loader import load_multiple_from_file
 from lib.config import get_config
 from methods.abstract_methods.experiment import Experiment
@@ -30,14 +29,16 @@ def main():
     if config["global"]["list_methods"]:
         experiments = scan_for_detection_methods()
         print_w_sep_line("Locally available methods:\n", config["global"]["interactive"])
-        for exp in experiments: print(exp.__name__)
+        for exp in experiments:
+            print(exp.__name__)
         print_w_sep_line("Finish", config["global"]["interactive"])
         exit(0)
     
     if config["global"]["list_datasets"]:
         print_w_sep_line("Available datasets:\n", config["global"]["interactive"])
         pathlist = Path(DATASETS_PATH).iterdir()
-        for path in pathlist: print(path)
+        for path in pathlist:
+            print(path)
         print_w_sep_line("Finish", config["global"]["interactive"])
         exit(0)
         
@@ -94,6 +95,7 @@ def run_benchmark(dataset_dict, config):
     
     return outputs
 
+
 def run_all_available(data, method_config, available_experiments):
     results = []
     for experiment in available_experiments:
@@ -107,18 +109,18 @@ def run_all_available(data, method_config, available_experiments):
             continue
     return results
 
+
 def run_experiment(data, method_config, method_name, available_experiments):
     
     available_exp_names = list(map(lambda x: x.__name__, available_experiments))
     if method_name in available_exp_names:
         return available_experiments[available_exp_names.index(method_name)](data=data, config=method_config).run()
     
-    try: # Check if method is model name from HuggingFace Hub for sequence classification
+    try:  # Check if method is model name from HuggingFace Hub for sequence classification
         return SupervisedExperiment(data, method_name, method_name, method_config).run()
     except:
         print(f"Tried to run method {method_name} as supervised. Failed due to:", file=sys.stderr)
         print(traceback.format_exc(), file=sys.stderr)
-        pass
     
     raise ValueError(f"Unknown method: {method_name}")
     
@@ -143,6 +145,7 @@ def scan_for_detection_methods():
 
     return exp_class_list
 
+
 def log_whole_experiment(config, outputs):
     """Log all experiment data as a whole by current time"""
         
@@ -155,7 +158,7 @@ def log_whole_experiment(config, outputs):
         json.dump(config, file, indent=4)
         
     # Save outputs.
-    with open(os.path.join(LOG_PATH, f"benchmark_results.json"), "w") as file:
+    with open(os.path.join(LOG_PATH, "benchmark_results.json"), "w") as file:
         json.dump(outputs, file)
 
 
