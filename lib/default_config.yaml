@@ -29,6 +29,7 @@ methods:
     batch_size: 16
     base_model_name: prajjwal1/bert-tiny
     mask_filling_model_name: google/t5-efficient-tiny-el6
+    model_output_machine_label: 0
     pct_words_masked: 0.3
     span_length: 2
     n_perturbation_rounds: 1
