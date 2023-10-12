@@ -210,10 +210,6 @@ def get_supervised_model_prediction(
                 return_tensors="pt",
             ).to(DEVICE)
             preds.extend(model(**batch_data).logits.softmax(-1)[:, pos_bit].tolist())
-            print(model.config.id2label)
-            print(model(**batch_data))
-            print(model(**batch_data).logits)
-            print(model(**batch_data).logits.softmax(-1)[:, pos_bit])
     return preds
 
 
