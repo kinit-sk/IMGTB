@@ -27,7 +27,10 @@ datasets/*
 results/*
 
 # Config files
+# Only ignore files in the root folder
 *.yml
 *.yaml
 !environment.yaml
 !example_config.yaml
+!*/*.yml
+!*/*.yaml
