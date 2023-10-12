@@ -33,12 +33,7 @@ def load_multiple_from_file(datasets_params, is_interactive: bool):
         dataset_name, file_dict = dataset_data
         dataset_processor = globals().get(f'process_{dataset_params["processor"]}')
         if dataset_processor is not None:
-            human_texts, machine_texts = dataset_processor(file_dict, 
-                                                           dataset_params["text_field"], 
-                                                           dataset_params["label_field"], 
-                                                           dataset_params["human_label"], 
-                                                           dataset_params["dataset_other"])
-            unified_data_dict[dataset_name] = _data_to_unified(human_texts, machine_texts, dataset_params)
+            unified_data_dict[dataset_name] = dataset_processor(file_dict, dataset_params)
         else:
             raise ValueError(f'Unknown dataset processor: {dataset_processor}')
     
@@ -93,7 +88,7 @@ def read_file_to_pandas(filepath: str, filetype="auto", *args):
         case "xml":
             data[Path(filepath).stem] = pd.read_xml(filepath)
         case "huggingfacehub":
-            data[Path(filepath).stem] = datasets.load_dataset(filepath) #.to_pandas()
+            data[Path(filepath).stem] = datasets.load_dataset(filepath)
         case _:
             return None
     
@@ -103,44 +98,129 @@ def read_file_to_pandas(filepath: str, filetype="auto", *args):
 #                     PROCESSORS                      #
 #######################################################
 
-def process_default(data: Dict[str, pd.DataFrame], text_field, label_field, human_label, *args) -> Tuple[pd.Series, pd.Series]:
+def process_default(data: Dict[str, pd.DataFrame], config) -> pd.DataFrame:
+    if config["filetype"] == "huggingfacehub":
+        return process_huggingfacehub(data, config)
+    if config["text_field"] not in data.columns or config["label_field"] not in data.columns:
+        raise ValueError("Could not parse dataset."
+                         "Text and label fields are not specified correctly."
+                         "Please, correctly specify dataset specifications or" 
+                         "define your own custom function for parsing.")
+    
     data = list(data.values())[0]
-    if text_field not in data.columns or label_field not in data.columns:
-        raise ValueError("Could not parse dataset. Text and label fields are not specified correctly. Please, correctly specify dataset specifications or define your own custom function for parsing.")
-    human_texts = data[text_field].where(data[label_field].astype("string") == human_label).dropna().reset_index(drop=True)
-    machine_texts = data[text_field].where(data[label_field].astype("string") != human_label).dropna().reset_index(drop=True)
-    return human_texts, machine_texts
+    data = data.loc[:, [config["text_field"], config["label_field"]]]
+    data[config["label_field"]] = data[config["label_field"]].astype(str) != config["human_label"]
+    
+    if config["test_size"] == 1:
+        return {"train": {"text": [], "label": []}, "test": data.to_dict(orient="list")}
+    
+    # Try to stratify, if possible
+    try:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=data["label"])
+    except ValueError:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=None)
 
-def process_test_small_dir(data: Dict[str, pd.DataFrame], *args):
+    return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
+
+    
+
+def process_huggingfacehub(data, config):
+    data = list(data.values())[0]
+    if config["train_split"] not in data.column_names.keys() or \
+       config["test_split"] not in data.column_names.keys() or \
+       config["text_field"] not in data.column_names[config["train_split"]] or \
+       config["label_field"] not in data.column_names[config["train_split"]] or \
+       config["text_field"] not in data.column_names[config["test_split"]] or \
+       config["label_field"] not in data.column_names[config["test_split"]]:
+        raise ValueError("Could not parse dataset."
+                         "Splits, text or label fields are not specified correctly."
+                         "Please, correctly specify dataset specifications or" 
+                         "define your own custom function for parsing.")
+        
+    return {"train": data[config["train_split"]].to_dict(), "test": data[config["test_split"]].to_dict()}
+
+           
+
+def process_human_only(data, config):
+    HUMAN_LABEL = 0
+    if config["text_field"] not in data.columns
+        raise ValueError("Could not parse dataset."
+                         "Text field is not specified correctly."
+                         "Please, correctly specify dataset specifications or" 
+                         "define your own custom function for parsing.")
+    
+    data = list(data.values())[0]
+    data = data.loc[:, [config["text_field"]]]
+    data[config["label_field"]] = pd.Series([HUMAN_LABEL]*data[config["text_field"]].size)
+    
+    if config["test_size"] == 1:
+        return {"train": {"text": [], "label": []}, "test": data.to_dict(orient="list")}
+    
+    # Try to stratify, if possible
+    try:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=data["label"])
+    except ValueError:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=None)
+
+    return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
+
+    
+
+def process_machine_only(data, config):
+    MACHINE_LABEL = 1
+    if config["text_field"] not in data.columns
+        raise ValueError("Could not parse dataset."
+                         "Text field is not specified correctly."
+                         "Please, correctly specify dataset specifications or" 
+                         "define your own custom function for parsing.")
+    
+    data = list(data.values())[0]
+    data = data.loc[:, [config["text_field"]]]
+    data[config["label_field"]] = pd.Series([MACHINE_LABEL]*data[config["text_field"]].size)
+    
+    if config["test_size"] == 1:
+        return {"train": {"text": [], "label": []}, "test": data.to_dict(orient="list")}
+    
+    # Try to stratify, if possible
+    try:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=data["label"])
+    except ValueError:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=None)
+
+    return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
+
+
+
+def process_test_small_dir(data: Dict[str, pd.DataFrame], config):
     human = data["human"]["human"]
     machine = data["machine"]["machine"]
     return human, machine
     
 
-def process_TruthfulQA(data: Dict[str, pd.DataFrame], text_field, label_field, human_label, other) -> Tuple[pd.Series, pd.Series]:
+def process_TruthfulQA(data: Dict[str, pd.DataFrame], config) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
-    detectLLM = other
+    detectLLM = config["dataset_other"]
     a_human = data['Best Answer'].fillna("").where(1 < data['Best Answer'].str.split().apply(len)).astype(str)
     a_chat = data[f'{detectLLM}_answer'].fillna("").where(1 < data[f'{detectLLM}_answer'].str.split().apply(len)).astype(str)
     return a_human, a_chat
 
 
-def process_SQuAD1(data: Dict[str, pd.DataFrame], text_field, label_field, human_label, other) -> Tuple[pd.Series, pd.Series]:
+def process_SQuAD1(data: Dict[str, pd.DataFrame], config) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
-    detectLLM = other
+    detectLLM = config["dataset_other"]
     a_human = [eval(ans)['text'][0] for ans in data['answers'].tolist() if len(eval(ans)['text'][0].split()) > 1]
     a_chat = data[f'{detectLLM}_answer'].fillna("").where(data[f'{detectLLM}_answer'].str.split().apply(len) > 1)
     return pd.Series(a_human), a_chat
 
 
-def process_NarrativeQA(data: Dict[str, pd.DataFrame], text_field, label_field, human_label, other) -> Tuple[pd.Series, pd.Series]:
+def process_NarrativeQA(data: Dict[str, pd.DataFrame], config) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
-    detectLLM = other
+    detectLLM = config["dataset_other"]
     a_human = [ans.split(";")[0] for ans in data['answers'].tolist() if 1 < len(ans.split(";")[0].split()) < 150]
     a_chat = data[f'{detectLLM}_answer'].fillna("").where((1 < data[f'{detectLLM}_answer'].str.split().apply(len)) & (data[f'{detectLLM}_answer'].str.split().apply(len) < 150))
     return pd.Series(a_human).astype(str), pd.Series(a_chat).astype(str)
 
-def process_test_small(data: Dict[str, pd.DataFrame], *args) -> Tuple[pd.Series, pd.Series]:
+def process_test_small(data: Dict[str, pd.DataFrame], config) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
     human_texts = data[data.label == 0]["text"]
     machine_texts = data[data.label == 1]["text"]
@@ -149,25 +229,6 @@ def process_test_small(data: Dict[str, pd.DataFrame], *args) -> Tuple[pd.Series,
 ###########################################################
 #                         UTILS                           #
 ###########################################################
-
-def _data_to_unified(human_texts: pd.Series, machine_texts: pd.Series, dataset_params) \
-                -> Dict[str, Dict[str, Union[List[str], List[int]]]]:
-
-    texts = pd.concat([human_texts, machine_texts], axis=0, names=["text"]).reset_index(drop=True)
-    labels = pd.Series([0]*len(human_texts) + [1]*len(machine_texts))
-    data = pd.DataFrame(data={"text": texts, "label": labels}).reset_index(drop=True)        
-
-    if dataset_params["test_size"] == 1:
-        return {"train": {"text": [], "label": []}, "test": data.to_dict(orient="list")}
-    
-    # Try to stratify, if possible
-    try:
-        data_train, data_test = train_test_split(data, test_size=dataset_params["test_size"], random_state=42, shuffle=dataset_params["shuffle"], stratify=data["label"])
-    except ValueError:
-        data_train, data_test = train_test_split(data, test_size=dataset_params["test_size"], random_state=42, shuffle=dataset_params["shuffle"], stratify=None)
-
-    return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
-
 
 def _process_spaces(text):
     return text.replace(

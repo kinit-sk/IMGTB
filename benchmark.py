@@ -52,7 +52,7 @@ def main():
         global LOG_PATH
         LOG_PATH = os.path.join(RESULTS_PATH, "logs", config["global"]["name"])
     
-    print_w_sep_line(f"Loading datasets {[list(dataset.values())[0] for dataset in config['data']['list']]}...", config["global"]["interactive"])
+    print_w_sep_line(f"Loading datasets {[dataset['filepath'] for dataset in config['data']['list']]}...", config["global"]["interactive"])
     dataset_dict = load_multiple_from_file(datasets_params=config["data"]["list"], is_interactive=config["global"]["interactive"])
 
     print_w_sep_line("Running benchmark...", config["global"]["interactive"])
