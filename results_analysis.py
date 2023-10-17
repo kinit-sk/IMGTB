@@ -10,6 +10,7 @@ import traceback
 import sys
 import json
 from collections import Counter
+from typing import List
 
 ########################################
 #            Helper functions          #
@@ -71,7 +72,98 @@ def analyze_test_metrics(results_list, save_path, is_interactive: bool):
     if is_interactive:
       plt.show()
 
+def _get_num_of_tokens(data: List[str]):
+  word_count = 0
+  for text_data in data:
+    spaces = text_data.count(' ')
+    tabs = text_data.count('\t')
+    newlines = text_data.count('\n')
+    word_count += spaces+tabs+newlines
+  return word_count
 
+
+def analyze_running_time(results_list, save_path: str, is_interactive: bool) -> None:
+  """
+  This function requires each experiment in the results list 
+  to have a 'running_time_seconds' item in its benchmark results.
+  """
+  if len(results_list.keys()) > 1:
+    analyze_running_time_over_multiple_datasets(results_list, save_path, is_interactive)
+  
+  for dataset_name, dataset_results in results_list.items():
+    results = pd.Series()
+    data_word_count = _get_num_of_tokens(dataset_results[0]["input_data"]["train"]["text"] + 
+                                         dataset_results[0]["input_data"]["test"]["text"])
+    for detector in dataset_results:
+      results = pd.concat([results, pd.DataFrame({'Detector': detector["name"], 
+                                                  'RunningTimeSeconds': detector["running_time_seconds"],
+                                                  'RunningTimeSecondsPerWord': detector["running_time_seconds"] / data_word_count}, index=[0])], copy=False, ignore_index=True)
+    fig = plt.figure(figsize=(10, 10))
+    fig.suptitle(f"{dataset_name} dataset", fontsize=16)
+    
+    rows = 2
+    cols = 1
+    
+    fig.add_subplot(rows, cols, 1)
+    ax = sns.barplot(results, x="Detector", y="RunningTimeSeconds")
+    plt.xticks(rotation=25)
+    
+    fig.add_subplot(rows, cols, 2)
+    ax = sns.barplot(results, x="Detector", y="RunningTimeSecondsPerWord")
+    plt.xticks(rotation=25)
+    
+    plt.savefig(os.path.join(save_path, f"{dataset_name}_running_time_comparison_analysis.png"))
+    if is_interactive:
+      plt.show()
+  
+
+def analyze_running_time_over_multiple_datasets(results_list, save_path: str, is_interactive: bool) -> None:
+  """
+  This function requires each experiment in the results list 
+  to have a 'running_time_seconds' item in its benchmark results.
+  """
+  for dataset_name, dataset_results in results_list.items():
+    results = pd.Series()
+    data_word_count = _get_num_of_tokens(dataset_results[0]["input_data"]["train"]["text"] + 
+                                         dataset_results[0]["input_data"]["test"]["text"])
+    for detector in dataset_results:
+      results = pd.concat([results, pd.DataFrame({'Detector': detector["name"],
+                                                  'Dataset': dataset_name,
+                                                  'RunningTimeSeconds': detector["running_time_seconds"],
+                                                  'RunningTimeSecondsPerWord': detector["running_time_seconds"] / data_word_count}, index=[0])], copy=False, ignore_index=True)
+    # Raw running time seconds (not normalized)
+    fig = plt.figure(figsize=(10, 10))
+    fig.suptitle("Running time (seconds) over multiple datasets", fontsize=16)
+    
+    rows = cols = ceil(sqrt(results["Detector"].unique().size))
+    
+    for i, detector_name in enumerate(results["Detector"].unique()):
+      detector_results = results[results["Detector"] == detector_name]
+      fig.add_subplot(rows, cols, i+1)
+      ax = sns.lineplot(detector_results, x="Dataset", y="RunningTimeSeconds", hue="Detector")
+      ax.set(title=detector_name)
+    
+    fig.tight_layout()  
+    plt.savefig(os.path.join(save_path, "running_time_over_multiple_datasets.png"), dpi=600)
+    if is_interactive:
+      plt.show()
+    
+    # Normalized running time (seconds) per word
+    fig = plt.figure(figsize=(10, 10))
+    fig.suptitle("Normlized per word running time (seconds) over multiple datasets", fontsize=16)
+    
+    rows = cols = ceil(sqrt(results["Detector"].unique().size))
+    
+    for i, detector_name in enumerate(results["Detector"].unique()):
+      detector_results = results[results["Detector"] == detector_name]
+      fig.add_subplot(rows, cols, i+1)
+      ax = sns.lineplot(detector_results, x="Dataset", y="RunningTimeSecondsPerWord", hue="Detector")
+      ax.set(title=detector_name)
+    
+    fig.tight_layout()  
+    plt.savefig(os.path.join(save_path, "norm_per_word_running_time_over_multiple_datasets.png"), dpi=600)
+    if is_interactive:
+      plt.show()
 
 def analyze_text_lengths(results_list, save_path, is_interactive: bool):
   for dataset_name, dataset_results in results_list.items():
@@ -127,15 +219,6 @@ def analyze_pred_prob_hist(results_list, save_path, is_interactive: bool):
       fig.add_subplot(rows, cols, i+1)
       ax = sns.histplot(results[column_name])
       ax.set(xlim=(0,1))
-
-    """
-    plt.subplots_adjust(left=0.1,
-                      bottom=0.155,
-                      right=0.9,
-                      top=0.85,
-                      wspace=0.33,
-                      hspace=0.8)
-    """
     
     fig.tight_layout()
     plt.savefig(os.path.join(save_path, f"{dataset_name}_pred_prob_hist_analysis.png"), dpi=600)
@@ -165,15 +248,6 @@ def analyze_pred_prob_error_hist(results_list, save_path, is_interactive: bool):
       fig.add_subplot(rows, cols, i+1)
       ax = sns.histplot(results[column_name])
       ax.set(title=column_name, xlim=(0,1))
-
-    """
-    plt.subplots_adjust(left=0.1,
-                      bottom=0.155,
-                      right=0.9,
-                      top=0.85,
-                      wspace=0.33,
-                      hspace=0.8)
-    """
     
     fig.tight_layout()  
     plt.savefig(os.path.join(save_path, f"{dataset_name}_pred_prob_error_hist_analysis.png"), dpi=600)

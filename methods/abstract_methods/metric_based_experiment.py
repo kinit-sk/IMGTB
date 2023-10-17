@@ -32,7 +32,8 @@ class MetricBasedExperiment(Experiment):
 
     @timeit
     def run(self):
-
+        start_time = time.time()
+        
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
         print(f"Using cache dir {self.cache_dir}")
@@ -72,11 +73,14 @@ class MetricBasedExperiment(Experiment):
         print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
         print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
         
+        end_time = time.time()
+        
         return {
             'name': f'{self.name}_threshold',
             'input_data': self.data,
             'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
             'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
+            'running_time_seconds': end_time - start_time,
             'metrics_results': {
                 'train': {
                     'acc': acc_train,

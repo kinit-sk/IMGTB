@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 import os
+import time
 
 
 class CustomDataset(torch.utils.data.Dataset):
@@ -48,7 +49,8 @@ class SupervisedExperiment(Experiment):
 
     @timeit
     def run(self):
-
+        start_time = time.time()
+        
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
             print(f"Using cache dir {self.cache_dir}")
@@ -151,6 +153,7 @@ class SupervisedExperiment(Experiment):
             "input_data": self.data,
             "predictions": {"train": y_train_pred, "test": y_test_pred},
             "machine_prob": {"train": y_train_pred_prob, "test": y_test_pred_prob},
+            'running_time_seconds': time.time() - start_time,
             "metrics_results": {
                 "train": {
                     "acc": acc_train,

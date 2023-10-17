@@ -1,5 +1,6 @@
 import os
 import requests
+import time
 from tqdm import tqdm
 from methods.abstract_methods.experiment import Experiment
 from methods.utils import timeit, cal_metrics
@@ -45,7 +46,8 @@ class GPTZero(Experiment):
         self.gptzero_key = config["gptzero_key"]
      
      def run(self):
-         
+        start_time = time.time()
+        
         gptzero_api = GPTZeroAPI(self.gptzero_key)
 
         train_text = self.data['train']['text']
@@ -74,6 +76,7 @@ class GPTZero(Experiment):
             'name': 'GPTZero',
             'predictions': {'train': train_pred, 'test': test_pred},
             'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
+            'running_time_seconds': time.time() - start_time,
             'metrics_results': {
                 'train': {
                     'acc': acc_train,

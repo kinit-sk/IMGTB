@@ -32,6 +32,7 @@ class MetricBasedMashup(Experiment):
 
     @timeit
     def run(self):
+        start_time = time.time()
         
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
@@ -85,6 +86,7 @@ class MetricBasedMashup(Experiment):
             'input_data': self.data,
             'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
             'machine_prob': {'train': train_pred_prob.tolist(), 'test': test_pred_prob.tolist()},
+            'running_time_seconds': time.time() - start_time,
             'metrics_results': {
                 'train': {
                     'acc': acc_train,

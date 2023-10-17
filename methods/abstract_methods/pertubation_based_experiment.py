@@ -8,7 +8,7 @@ import random
 import time
 import os
 from tqdm import tqdm
-from methods.utils import load_base_model_and_tokenizer, move_model_to_device, get_clf_results
+from methods.utils import load_base_model_and_tokenizer, move_model_to_device, get_clf_results, timeit
 
 FILL_DICTIONARY = set()
 
@@ -21,11 +21,14 @@ class PertubationBasedExperiment(Experiment):
         self.config = config
         self.base_model = None
         self.base_tokenizer = None
+        self.start_time = None
      
      def get_score(self, text, perturbed_texts, base_model, base_tokenizer, DEVICE):
         raise NotImplementedError("Attempted to call an abstract method.")
      
+     @timeit
      def run(self):
+        self.start_time = time.time()
         
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
@@ -75,14 +78,12 @@ class PertubationBasedExperiment(Experiment):
         # perturbation_mode = 'd'
         perturbation_mode = 'z'
         n_perturbations = self.config["n_perturbations"]
-        t1 = time.time()
 
         perturbation_results = self.get_perturbation_results(
             self.config, self.data, mask_model, mask_tokenizer, self.base_model, self.base_tokenizer, self.config["span_length"], n_perturbations)
 
         res = self.evaluate_perturbation_results(self.config, perturbation_results, perturbation_mode,
                                         span_length=self.config["span_length"], n_perturbations=n_perturbations)
-        print(f'{self.name} took %.4f sec' % (time.time() - t1))
         return res
     
      def get_perturbation_results(self, args, data, mask_model, mask_tokenizer, base_model, base_tokenizer, span_length=10, n_perturbations=1):
@@ -176,6 +177,7 @@ class PertubationBasedExperiment(Experiment):
                 'input_data': self.data,
                 'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
                 'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
+                'running_time_seconds': time.time() - self.start_time,
                 'metrics_results': {
                     'train': {
                         'acc': acc_train,

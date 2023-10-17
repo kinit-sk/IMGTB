@@ -3,6 +3,7 @@ from methods.utils import timeit, get_clf_results, load_base_model_and_tokenizer
 import torch
 import numpy as np
 import os
+import time
 
 
 class GLTRMetric(MetricBasedExperiment):
@@ -47,6 +48,7 @@ class GLTRMetric(MetricBasedExperiment):
     
     @timeit
     def run(self):
+        start_time = time.time()
         
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
@@ -90,6 +92,7 @@ class GLTRMetric(MetricBasedExperiment):
             'input_data': self.data,
             'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
             'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
+            'running_time_seconds': time.time() - start_time,
             'metrics_results': {
                 'train': {
                     'acc': acc_train,
