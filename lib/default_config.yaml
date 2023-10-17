@@ -14,7 +14,7 @@ data:
     label_field: label
     human_label: "0"
     dataset_other: null
-    test_size: 1
+    test_size: 0.3
     train_split: "train"
     test_split: "test"
     shuffle: True
