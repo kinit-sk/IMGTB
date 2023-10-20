@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root>
   <row>
-    <text></text>
-    <label>0</label>
-  </row>
-  <row>
     <text>a</text>
     <label>1</label>
   </row>

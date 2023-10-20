@@ -17,6 +17,7 @@ data:
     test_size: 0.3
     train_split: "train"
     test_split: "test"
+    configuration: null
     shuffle: True
   list: []
 

@@ -28,6 +28,7 @@ data:
     filetype: huggingfacehub
     processor: human_only
     text_field: best_answer
+    configuration: generation
   - filepath: taln-ls2n/semeval-2010-pre
     filetype: huggingfacehub
     processor: machine_only
