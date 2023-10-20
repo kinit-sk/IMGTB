@@ -19,3 +19,4 @@ dependencies:
     - xlrd==2.0.1
     - pyarrow==13.0.0
     - lxml==4.9.3
+    - openpyxl==3.0.10
