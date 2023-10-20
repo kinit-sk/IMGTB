@@ -101,13 +101,14 @@ def read_file_to_pandas(filepath: str, filetype="auto", *args):
 def process_default(data: Dict[str, pd.DataFrame], config) -> pd.DataFrame:
     if config["filetype"] == "huggingfacehub":
         return process_huggingfacehub(data, config)
+
+    data = list(data.values())[0]    
     if config["text_field"] not in data.columns or config["label_field"] not in data.columns:
         raise ValueError("Could not parse dataset."
                          "Text and label fields are not specified correctly."
                          "Please, correctly specify dataset specifications or" 
                          "define your own custom function for parsing.")
     
-    data = list(data.values())[0]
     data = data.loc[:, [config["text_field"], config["label_field"]]]
     data[config["label_field"]] = data[config["label_field"]].astype(str) != config["human_label"]
     
@@ -204,7 +205,7 @@ def process_machine_only(data, config):
     MACHINE_LABEL = 1
     if config["filetype"] == "huggingfacehub":
         return process_huggingfacehub(data, config)
-    if config["text_field"] not in data.columns
+    if config["text_field"] not in data.columns:
         raise ValueError("Could not parse dataset."
                          "Text field is not specified correctly."
                          "Please, correctly specify dataset specifications or" 
@@ -228,17 +229,50 @@ def process_machine_only(data, config):
 
 
 def process_test_small_dir(data: Dict[str, pd.DataFrame], config):
-    human = data["human"]["human"]
-    machine = data["machine"]["machine"]
-    return human, machine
+    human_texts = data["human"]["human"]
+    machine_texts = data["machine"]["machine"]
+    df_human_labeled = pd.concat([human_texts, pd.Series([0]*human_texts.size)], axis="columns", ignore_index=True, names=["text", "label"])
+    df_chat_labeled = pd.concat([machine_texts, pd.Series([1]*machine_texts.size)], axis="columns", ignore_index=True, names=["text", "label"])
+    
+    data = pd.concat([df_human_labeled, df_chat_labeled], ignore_index=True)
+    data.columns = ["text", "label"]
+    
+    if config["test_size"] == 1:
+        return {"train": {"text": [], "label": []}, "test": data.to_dict(orient="list")}
+    
+    # Try to stratify, if possible
+    try:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=data["label"])
+    except ValueError:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=None)
+
+    return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
+                  
     
 
 def process_TruthfulQA(data: Dict[str, pd.DataFrame], config) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
     detectLLM = config["dataset_other"]
+    
     a_human = data['Best Answer'].fillna("").where(1 < data['Best Answer'].str.split().apply(len)).astype(str)
     a_chat = data[f'{detectLLM}_answer'].fillna("").where(1 < data[f'{detectLLM}_answer'].str.split().apply(len)).astype(str)
-    return a_human, a_chat
+
+    df_human_labeled = pd.concat([a_human, pd.Series([0]*a_human.size)], axis="columns", ignore_index=True, names=["text", "label"])
+    df_chat_labeled = pd.concat([a_chat, pd.Series([1]*a_chat.size)], axis="columns", ignore_index=True, names=["text", "label"])
+    
+    data = pd.concat([df_human_labeled, df_chat_labeled], ignore_index=True)
+    data.columns = ["text", "label"]
+    
+    if config["test_size"] == 1:
+        return {"train": {"text": [], "label": []}, "test": data.to_dict(orient="list")}
+    
+    # Try to stratify, if possible
+    try:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=data["label"])
+    except ValueError:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=None)
+
+    return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
 
 
 def process_SQuAD1(data: Dict[str, pd.DataFrame], config) -> Tuple[pd.Series, pd.Series]:
@@ -246,7 +280,24 @@ def process_SQuAD1(data: Dict[str, pd.DataFrame], config) -> Tuple[pd.Series, pd
     detectLLM = config["dataset_other"]
     a_human = [eval(ans)['text'][0] for ans in data['answers'].tolist() if len(eval(ans)['text'][0].split()) > 1]
     a_chat = data[f'{detectLLM}_answer'].fillna("").where(data[f'{detectLLM}_answer'].str.split().apply(len) > 1)
-    return pd.Series(a_human), a_chat
+    
+    df_human_labeled = pd.concat([a_human, pd.Series([0]*a_human.size)], axis="columns", ignore_index=True, names=["text", "label"])
+    df_chat_labeled = pd.concat([a_chat, pd.Series([1]*a_chat.size)], axis="columns", ignore_index=True, names=["text", "label"])
+    
+    data = pd.concat([df_human_labeled, df_chat_labeled], ignore_index=True)
+    data.columns = ["text", "label"]
+    
+    if config["test_size"] == 1:
+        return {"train": {"text": [], "label": []}, "test": data.to_dict(orient="list")}
+    
+    # Try to stratify, if possible
+    try:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=data["label"])
+    except ValueError:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=None)
+
+    return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
+
 
 
 def process_NarrativeQA(data: Dict[str, pd.DataFrame], config) -> Tuple[pd.Series, pd.Series]:
@@ -254,13 +305,47 @@ def process_NarrativeQA(data: Dict[str, pd.DataFrame], config) -> Tuple[pd.Serie
     detectLLM = config["dataset_other"]
     a_human = [ans.split(";")[0] for ans in data['answers'].tolist() if 1 < len(ans.split(";")[0].split()) < 150]
     a_chat = data[f'{detectLLM}_answer'].fillna("").where((1 < data[f'{detectLLM}_answer'].str.split().apply(len)) & (data[f'{detectLLM}_answer'].str.split().apply(len) < 150))
-    return pd.Series(a_human).astype(str), pd.Series(a_chat).astype(str)
+    
+    df_human_labeled = pd.concat([a_human, pd.Series([0]*a_human.size)], axis="columns", ignore_index=True, names=["text", "label"])
+    df_chat_labeled = pd.concat([a_chat, pd.Series([1]*a_chat.size)], axis="columns", ignore_index=True, names=["text", "label"])
+    
+    data = pd.concat([df_human_labeled, df_chat_labeled], ignore_index=True)
+    data.columns = ["text", "label"]
+    
+    if config["test_size"] == 1:
+        return {"train": {"text": [], "label": []}, "test": data.to_dict(orient="list")}
+    
+    # Try to stratify, if possible
+    try:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=data["label"])
+    except ValueError:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=None)
+
+    return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
+
 
 def process_test_small(data: Dict[str, pd.DataFrame], config) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
     human_texts = data[data.label == 0]["text"]
     machine_texts = data[data.label == 1]["text"]
-    return human_texts, machine_texts                       
+    
+    df_human_labeled = pd.concat([human_texts, pd.Series([0]*human_texts.size)], axis="columns", ignore_index=True, names=["text", "label"])
+    df_chat_labeled = pd.concat([machine_texts, pd.Series([1]*machine_texts.size)], axis="columns", ignore_index=True, names=["text", "label"])
+    
+    data = pd.concat([df_human_labeled, df_chat_labeled], ignore_index=True)
+    data.columns = ["text", "label"]
+    
+    if config["test_size"] == 1:
+        return {"train": {"text": [], "label": []}, "test": data.to_dict(orient="list")}
+    
+    # Try to stratify, if possible
+    try:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=data["label"])
+    except ValueError:
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=None)
+
+    return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
+                  
 
 ###########################################################
 #                         UTILS                           #
