@@ -122,25 +122,25 @@ def move_tensor_to_device(tensor, DEVICE):
 def cal_metrics(label, pred_label, pred_posteriors):
     if len(set(label)) < 2:
         acc = accuracy_score(label, pred_label)
-        precision = precision_score(label, pred_label, average="macro")
-        recall = recall_score(label, pred_label, average="macro")
-        f1 = f1_score(label, pred_label, average="macro")
-        print("Cannot evaluate AUC metric on data with less than 2 labels. Setting AUC to 0...")
-        auc = 0
+        precision = precision_score(label, pred_label, average="weighted")
+        recall = recall_score(label, pred_label, average="weighted")
+        f1 = f1_score(label, pred_label, average="weighted")
+        print("Cannot evaluate AUC metric on data with less than 2 labels. Setting AUC to -1...")
+        auc = -1.0
     elif len(set(label)) == 2:
         acc = accuracy_score(label, pred_label)
-        precision = precision_score(label, pred_label)
-        recall = recall_score(label, pred_label)
-        f1 = f1_score(label, pred_label)
+        precision = precision_score(label, pred_label, average="weighted")
+        recall = recall_score(label, pred_label, average="weighted")
+        f1 = f1_score(label, pred_label, average="weighted")
         auc = roc_auc_score(label, pred_posteriors)
     else:
         acc = accuracy_score(label, pred_label)
         precision = precision_score(label, pred_label, average='weighted')
         recall = recall_score(label, pred_label, average='weighted')
         f1 = f1_score(label, pred_label, average='weighted')
+        print("Cannot evaluate AUC metric on data with more than 2 labels. Setting AUC to -1...")
         auc = -1.0
-        conf_m = confusion_matrix(label, pred_label)
-        print(conf_m)
+
     return acc, precision, recall, f1, auc
 
 
