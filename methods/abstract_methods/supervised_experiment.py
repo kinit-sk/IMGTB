@@ -41,10 +41,10 @@ class SupervisedExperiment(Experiment):
         self.cache_dir = config["cache_dir"]
         self.batch_size = config["batch_size"]
         self.DEVICE = config["DEVICE"]
-        self.pos_bit = pos_bit
-        self.finetune = finetune
-        self.num_labels = num_labels
-        self.epochs = epochs
+        self.pos_bit = config["pos_bit"]
+        self.finetune = config["finetune"]
+        self.num_labels = config["num_labels"]
+        self.epochs = config["epochs"]
         self.model_output_machine_label = config["model_output_machine_label"]
 
     @timeit
