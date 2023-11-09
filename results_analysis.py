@@ -44,30 +44,24 @@ def analyze_test_metrics(results_list, save_path, is_interactive: bool):
     fig.add_subplot(rows, cols, 1)
     ax = sns.barplot(results, x="Detector", y="F1-score")
     ax.set(ylim=(0,1))
-    plt.xticks(rotation=25)
+    plt.xticks(rotation=25, ha="right")
     
     fig.add_subplot(rows, cols, 2)
     ax = sns.barplot(results, x="Detector", y="Accuracy")
     ax.set(ylim=(0,1))
-    plt.xticks(rotation=25)
+    plt.xticks(rotation=25, ha="right")
 
     fig.add_subplot(rows, cols, 3)
     ax = sns.barplot(results, x="Detector", y="Precision")
     ax.set(ylim=(0,1))
-    plt.xticks(rotation=25)
+    plt.xticks(rotation=25, ha="right")
     
     fig.add_subplot(rows, cols, 4)
     ax = sns.barplot(results, x="Detector", y="Recall")
     ax.set(ylim=(0,1))
-    plt.xticks(rotation=25)
+    plt.xticks(rotation=25, ha="right")
 
-    plt.subplots_adjust(left=0.1,
-                      bottom=0.155,
-                      right=0.9,
-                      top=0.85,
-                      wspace=0.33,
-                      hspace=0.8)
-  
+    fig.tight_layout()  
     plt.savefig(os.path.join(save_path, f"{dataset_name}_metrics_analysis.png"))
     if is_interactive:
       plt.show()
@@ -106,11 +100,11 @@ def analyze_running_time(results_list, save_path: str, is_interactive: bool) -> 
     
     fig.add_subplot(rows, cols, 1)
     sns.barplot(results, x="Detector", y="RunningTimeSeconds")
-    plt.xticks(rotation=25)
+    plt.xticks(rotation=25, ha="right")
     
     fig.add_subplot(rows, cols, 2)
     sns.barplot(results, x="Detector", y="RunningTimeSecondsPerWord")
-    plt.xticks(rotation=25)
+    plt.xticks(rotation=25, ha="right")
     
     plt.savefig(os.path.join(save_path, f"{dataset_name}_running_time_comparison_analysis.png"))
     if is_interactive:
