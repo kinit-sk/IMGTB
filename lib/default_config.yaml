@@ -46,6 +46,10 @@ methods:
     random_fills: false
     random_fills_tokens: false
     gptzero_key: ""
+    pos_bit: 0
+    finetune: False
+    num_labels: 2
+    epochs: 3
   list: []
 
 analysis: []
