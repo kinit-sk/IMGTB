@@ -24,6 +24,8 @@ from sklearn.model_selection import train_test_split
 """
 
 SUPPORTED_FILETYPES = ["auto", "csv", "tsv", "xls", "xlsx", "json", "jsonl", "xml", "huggingfacehub"]
+DEFAULT_TEXT_FIELD_NAME = "text"
+DEFAULT_LABEL_FIELD_NAME = "label"
 
 
 def load_multiple_from_file(datasets_params, is_interactive: bool):
@@ -116,7 +118,8 @@ def process_default(data: Dict[str, pd.DataFrame], config) -> pd.DataFrame:
                          "define your own custom function for parsing.")
     
     data = data.loc[:, [config["text_field"], config["label_field"]]]
-    data[config["label_field"]] = data[config["label_field"]].astype(str) != config["human_label"]
+    data.rename(columns={config["text_field"]: DEFAULT_TEXT_FIELD_NAME}, inplace=True)
+    data[DEFAULT_LABEL_FIELD_NAME] = data[config["label_field"]].astype(str) != config["human_label"]
     
     if config["test_size"] == 1:
         return {"train": {"text": [], "label": []}, "test": data.to_dict(orient="list")}
@@ -177,7 +180,8 @@ def process_huggingfacehub(data, config):
     
     if isinstance(data, datasets.Dataset):
         data = data.to_pandas().loc[:, [config["text_field"], config["label_field"]]]
-        data[config["label_field"]] = data[config["label_field"]].astype(str) != config["human_label"]
+        data[DEFAULT_LABEL_FIELD_NAME] = data[config["label_field"]].astype(str) != config["human_label"]
+        data.rename(columns={config["text_field"]: DEFAULT_TEXT_FIELD_NAME}, inplace=True)
         # Try to stratify, if possible
         try:
             data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=data["label"])
