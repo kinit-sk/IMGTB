@@ -398,7 +398,7 @@ def make_method_names_unique(results):
   return results
 
 if __name__ == '__main__':
-  if sys.argv != 3:
+  if len(sys.argv) != 3:
     print("Please, specify file to run the analysis on and a save path to store analysis results. Aborting...")
     exit(1)
   run_full_analysis_from_file(sys.args[1], sys.args[2])
