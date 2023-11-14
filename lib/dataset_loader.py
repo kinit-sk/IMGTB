@@ -263,22 +263,35 @@ def process_machine_only(data, config):
 def process_test_small_dir(data: Dict[str, pd.DataFrame], config):
     human_texts = data["human"]["human"]
     machine_texts = data["machine"]["machine"]
-    df_human_labeled = pd.concat([human_texts, pd.Series([0]*human_texts.size)], axis="columns", ignore_index=True, names=["text", "label"])
-    df_chat_labeled = pd.concat([machine_texts, pd.Series([1]*machine_texts.size)], axis="columns", ignore_index=True, names=["text", "label"])
-    
+    df_human_labeled = pd.concat([human_texts, 
+                                  pd.Series([0]*human_texts.size)], 
+                                 axis="columns", 
+                                 ignore_index=True, 
+                                 names=["text", "label"])
+    df_chat_labeled = pd.concat([machine_texts, 
+                                 pd.Series([1]*machine_texts.size)], 
+                                axis="columns", 
+                                ignore_index=True, 
+                                names=["text", "label"])
+
     data = pd.concat([df_human_labeled, df_chat_labeled], ignore_index=True)
     data.columns = ["text", "label"]
-    
+
     if config["test_size"] == 1:
         return {"train": {"text": [], "label": []}, "test": data.to_dict(orient="list")}
-    
+
     # Try to stratify, if possible
     try:
-        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=data["label"])
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], 
+                                                 random_state=42, shuffle=config["shuffle"], 
+                                                 stratify=data["label"])
     except ValueError:
-        data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=None)
+        data_train, data_test = train_test_split(data, test_size=config["test_size"], 
+                                                 random_state=42, shuffle=config["shuffle"], 
+                                                 stratify=None)
 
-    return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
+    return {"train": data_train.reset_index().to_dict(orient='list'), 
+            "test": data_test.reset_index().to_dict(orient='list')}
                   
     
 
