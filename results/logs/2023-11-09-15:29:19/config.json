@@ -1,0 +1,129 @@
+{
+    "global": {
+        "interactive": false,
+        "name": null,
+        "list_methods": false,
+        "list_datasets": false,
+        "list_analysis_methods": false
+    },
+    "data": {
+        "list": [
+            {
+                "filetype": "huggingfacehub",
+                "processor": "machine_only",
+                "text_field": "output",
+                "label_field": "label",
+                "human_label": "0",
+                "dataset_other": null,
+                "test_size": 0.3,
+                "train_split": "train",
+                "test_split": "test",
+                "configuration": null,
+                "shuffle": true,
+                "filepath": "pankajmathur/dolly-v2_orca"
+            }
+        ]
+    },
+    "methods": {
+        "list": [
+            {
+                "cache_dir": ".cache",
+                "DEVICE": "cuda",
+                "clf_algo_for_threshold": {
+                    "name": "LogisticRegression"
+                },
+                "batch_size": 16,
+                "base_model_name": "gpt2-medium",
+                "mask_filling_model_name": "t5-large",
+                "model_output_machine_label": 0,
+                "pct_words_masked": 0.3,
+                "span_length": 2,
+                "n_perturbation_rounds": 1,
+                "n_perturbations": 10,
+                "chunk_size": 20,
+                "n_similarity_samples": 20,
+                "int8": false,
+                "half": false,
+                "do_top_k": false,
+                "top_p": 0.96,
+                "buffer_size": 1,
+                "mask_top_p": 1.0,
+                "random_fills": false,
+                "random_fills_tokens": false,
+                "gptzero_key": "",
+                "pos_bit": 0,
+                "finetune": false,
+                "num_labels": 2,
+                "epochs": 3,
+                "name": "roberta-base-openai-detector"
+            },
+            {
+                "cache_dir": ".cache",
+                "DEVICE": "cuda",
+                "clf_algo_for_threshold": {
+                    "name": "LogisticRegression"
+                },
+                "batch_size": 16,
+                "base_model_name": "gpt2-medium",
+                "mask_filling_model_name": "t5-large",
+                "model_output_machine_label": 0,
+                "pct_words_masked": 0.3,
+                "span_length": 2,
+                "n_perturbation_rounds": 1,
+                "n_perturbations": 10,
+                "chunk_size": 20,
+                "n_similarity_samples": 20,
+                "int8": false,
+                "half": false,
+                "do_top_k": false,
+                "top_p": 0.96,
+                "buffer_size": 1,
+                "mask_top_p": 1.0,
+                "random_fills": false,
+                "random_fills_tokens": false,
+                "gptzero_key": "",
+                "pos_bit": 0,
+                "finetune": false,
+                "num_labels": 2,
+                "epochs": 3,
+                "name": "Hello-SimpleAI/chatgpt-detector-roberta"
+            },
+            {
+                "cache_dir": ".cache",
+                "DEVICE": "cuda",
+                "clf_algo_for_threshold": {
+                    "name": "LogisticRegression"
+                },
+                "batch_size": 16,
+                "base_model_name": "gpt2-medium",
+                "mask_filling_model_name": "t5-large",
+                "model_output_machine_label": 0,
+                "pct_words_masked": 0.3,
+                "span_length": 2,
+                "n_perturbation_rounds": 1,
+                "n_perturbations": 10,
+                "chunk_size": 20,
+                "n_similarity_samples": 20,
+                "int8": false,
+                "half": false,
+                "do_top_k": false,
+                "top_p": 0.96,
+                "buffer_size": 1,
+                "mask_top_p": 1.0,
+                "random_fills": false,
+                "random_fills_tokens": false,
+                "gptzero_key": "",
+                "pos_bit": 0,
+                "finetune": false,
+                "num_labels": 2,
+                "epochs": 3,
+                "name": "andreas122001/roberta-mixed-detector"
+            }
+        ]
+    },
+    "analysis": [
+        {
+            "name": "all"
+        }
+    ]
+}

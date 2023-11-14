@@ -25,6 +25,8 @@ datasets/*
 !datasets/test_small_dir/*
 
 results/*
+!results/logs
+!results/methods
 
 # Config files
 # Only ignore files in the root folder
