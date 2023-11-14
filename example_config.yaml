@@ -20,7 +20,7 @@ data:
   # Reference a Hugging Face Hub dataset with its identifier
   - filepath: yaful/DeepfakeTextDetect
     filetype: huggingfacehub
-    train_split: train # Use different splits as train/test
+    train_split: test_ood_gpt # Use different splits as train/test
     test_split: test_ood_gpt_para
     human_label: "1" # Specify labels corresponding human/machine text
 
@@ -39,11 +39,7 @@ methods:
   list:
   - name: MiracleMetric
   - name: MiracleMetric
-    base_model_name: roberta-base
-    clf_algo_for_threshold:
-      name: MLPClassifier
-      hidden_layer_sizes: [64, 32, 16]
-    new_parameter: value # New parameters can be added on the fly
+    new_parameter: value # New parameters can be added on the flynew_parameter: value # New parameters can be added on the fly
   - name: LoglikelihoodMetric
   - name: LogRankMetric
   - name: EntropyMetric
