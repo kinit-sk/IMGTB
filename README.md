@@ -1,5 +1,5 @@
 
-# **Integrated MGTBench Framework**
+# **IMGTB: Integrated MGTBench Framework**
 A machine-generated text benchmarking framework, heavily based upon the original [MGTBench project](https://github.com/xinleihe/MGTBench), featuring additional funcionalities that make it easier to integrate custom datasets and new custom detection methods. 
 
 The framework also includes a couple of analysis tools for automatic analysis of the benchmark results.
@@ -33,10 +33,10 @@ You can download the supported datasets from from [Google Drive](https://drive.g
 > :warning: Currently it is not possible to clone the repository as it is **private**!
 
 ```bash
-git clone https://github.com/michalspiegel/IntegratedMGTBenchFramework.git;
-cd IntegratedMGTBenchFramework;
+git clone https://github.com/michalspiegel/IMGTB.git;
+cd IMGTB;
 conda env create -f environment.yaml;
-conda activate IntegratedMGTBenchFramework;
+conda activate IMGTB;
 ```
 
 ## **Usage**
@@ -57,8 +57,8 @@ You can specify parameters for the benchmark run in two ways:
 
 ### **Command-line arguments**
 To see a summarization of all of the command-line arguments and options, see either the help message or the `lib/config.py` source file.
-### **YAML configuration file**
-You can specify the config filepath with the command-line option `--from_config FILEPATH`. To see a tutorial example of a YAML config file, see `example_config.yaml` in the main folder. To see all parameters currently accepted, see `lib/default_config.yaml`. 
+### **YAML configuration file** 
+See example configuration file at `example_config.yaml` explaining most of the available features, or see `lib/default_config.yaml` to see all currently supported parameters.
 ## **Support for custom dataset integration**
 ### **Dataset parameters**
 In the CLI you will have to define a path to your dataset file (or a folder, if your dataset is constructed from multiple files).

@@ -1,4 +1,4 @@
-name: IntegratedMGTBenchFramework
+name: IMGTB
 channels:
   - defaults
 dependencies:
