@@ -3,7 +3,7 @@
 # They will not be passed (directly) to any library or detection method.
 global: 
   interactive: false
-  name: null
+  name: miracle_method_eval
 
 # Global parameters will be used with all datasets in the list, 
 # if not specified differently in the individual dataset parameters.
@@ -12,36 +12,60 @@ data:
   global:
     filetype: auto
   list:
-  - filepath: datasets/test_small_dir
-    processor: test_small_dir
-  - filepath: datasets/test_small.csv
-    processor: default
-    filetype: csv
-    text_field: text
-    label_field: label
-    human_label: "0"
-    dataset_other: null
+  - filepath: xzuyn/futurama-alpaca
+    filetype: huggingfacehub
+    processor: machine_only
+    text_field: output # Specify relevant column names for processing
 
-# If you don't specify a parameter, it will be defined with its default value (defined in lib/default_config.yaml).
-# If you want to pass additional new parameters to your detection methods, 
-# you can just create them here and they will be passed on.
+  # Reference a Hugging Face Hub dataset with its identifier
+  - filepath: yaful/DeepfakeTextDetect
+    filetype: huggingfacehub
+    train_split: train # Use different splits as train/test
+    test_split: test_ood_gpt_para
+    human_label: "1" # Specify labels corresponding human/machine text
+
+  # Load multiple files as one dataset by specifying the directory
+  - filepath: datasets/test_small_dir
+    processor: test_small_dir # Custom "processing" function for parsing
+    new_parameter: value # New parameters can be added on the fly
+
+# If you don't specify a parameter, it will keep its default value (defined in lib/default_config.yaml).
 methods:
   global:
-    base_model_name: prajjwal1/bert-tiny
-    mask_filling_model_name: google/t5-efficient-tiny
-    DEVICE: cpu
+    base_model_name: gpt2-medium
+    mask_filling_model_name: t5-large
+    DEVICE: cuda
     cache_dir: .cache
   list:
+  - name: MiracleMetric
+  - name: MiracleMetric
+    base_model_name: roberta-base
+    clf_algo_for_threshold:
+      name: MLPClassifier
+      hidden_layer_sizes: [64, 32, 16]
+    new_parameter: value # New parameters can be added on the fly
+  - name: LoglikelihoodMetric
+  - name: LogRankMetric
   - name: EntropyMetric
-  - name: RankMetric
-    mask_filling_model_name: google/t5-efficient-tiny-el6
+  - name: DetectLLM_LLR
+  - name: MFDMetric
+    clf_algo_for_threshold:
+      name: MLPClassifier
+      hidden_layer_sizes: [64, 32, 16]
   - name: DetectGPT
-  - name: ProsusAI/finbert # You can specify any pretrained text classification model from Hugging Face Hub by providing its identifier (for more info see docs) 
-
+  - name: DetectLLM_NPR
+  - name: DetectLLM_NPR
+    int8: True
+    pct_words_masked: 0.4
+    span_length: 3
+    n_perturbation_rounds: 2
+    n_perturbations: 5
+  # Methods can be available locally or from Hugging Face
+  - name: roberta-base-openai-detector
+  - name: Hello-SimpleAI/chatgpt-detector-roberta
 # You can either list different analysis methods by name
 # Or select " - name: all" to run all available  
 analysis:
-  - name: analyze_test_metrics
-  - name: analyze_text_lengths
+  - name: all
   
 ...
