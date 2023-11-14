@@ -28,8 +28,8 @@ methods:
     clf_algo_for_threshold:
       name: LogisticRegression
     batch_size: 16
-    base_model_name: prajjwal1/bert-tiny
-    mask_filling_model_name: google/t5-efficient-tiny-el6
+    base_model_name: gpt2-medium
+    mask_filling_model_name: t5-large
     model_output_machine_label: 0
     pct_words_masked: 0.3
     span_length: 2
