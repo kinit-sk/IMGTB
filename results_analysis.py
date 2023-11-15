@@ -386,6 +386,8 @@ def list_available_analysis_methods():
   print("pred_prob_error_hist     ...   For each method evaluated on a given dataset, show a histogram of errors in prediction (how far was the prediction from true label, how often)")
   print("analyze_false_positives  ...   Analyze false positive rates")
   print("analyze_false_negatives  ...   Analyze false negative rates")
+  print("analyze_running_time     ...   Analyze per-method per-dataset running time")
+  print("analyze_running_time_over_multiple_datasets  ... Analyze per-method running time over multiple datasets")
 
 def make_method_names_unique(results):
   for _, dataset in results.items():

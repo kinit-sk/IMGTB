@@ -6,6 +6,9 @@ The framework also includes a couple of analysis tools for automatic analysis of
 Namely, currently we are able to visualize:
 - Multiple metrics (Accuracy, Precision, Recall, F1 score) evaluated on the test data partition
 - F1 score for multiple different text length groups
+- Per-method (per-dataset) running time, running time over multiple datasets
+- Prediction probability histogram
+- Prediction probability error histogram (how often and by how much is the prediction off)
 
 ## **Supported Methods**
 Currently, we support the following methods. To add a new method you can see the documentation below:
@@ -18,15 +21,19 @@ Currently, we support the following methods. To add a new method you can see the
     - DetectGPT [[Ref]](https://arxiv.org/abs/2301.11305);
     - DetectLLM-LLR [[Ref]](https://arxiv.org/abs/2306.05540);
     - DetectLLM-NPR [[Ref]](https://arxiv.org/abs/2306.05540);
+    - Multi-Feature Detection [[Ref]](https://www.researchsquare.com/article/rs-3226684/v1)
+    - LLM Deviation [[Ref]](https://www.researchsquare.com/article/rs-3226684/v1)
 - Model-based methods:
-    - Any HuggingFace text classification model
-
-## **Supported Datasets**
-- TruthfulQA;
-- SQuAD1;
-- NarrativeQA; 
-
-You can download the supported datasets from from [Google Drive](https://drive.google.com/drive/folders/1p4iBeM4r-sUKe8TnS4DcYlxvQagcmola?usp=sharing) or use your own according to the manual below.
+    - RoBERTa Base OpenAI Detector [[Ref]](https://huggingface.co/roberta-base-openai-detector)
+    - RoBERTa Large OpenAI Detector [[Ref]](https://huggingface.co/roberta-large-openai-detector)
+    - ChatGPT-detector-RoBERTa [[Ref]](https://huggingface.co/Hello-SimpleAI/chatgpt-detector-roberta)
+    - detection-longformer [[Ref]](https://huggingface.co/nealcly/detection-longformer)
+    - arincon/roberta-base-autextification-detection [[Ref]](https://huggingface.co/arincon/roberta-base-autextification-detection)
+    - orzhan/ruroberta-ruatd-binary [[Ref]](https://huggingface.co/orzhan/ruroberta-ruatd-binary)
+    - andreas122001/roberta-mixed-detector [[Ref]](https://huggingface.co/andreas122001/roberta-mixed-detector)
+    - Any other HuggingFace text classification model
+- Other
+    - GPTZero [[Ref]](https://gptzero.me/)
 
 ## **Installation**
 
@@ -73,6 +80,14 @@ The general dataset definition or usage of the `--dataset` option would be:
 ```
 Only required parameter is the dataset filepath, other parameters will be filled in with their default values, if left empty.
 
+### **Supported dataset formats**
+We currently support all filetypes listed below, together with the following formats:
+- Default processor can parse Hugging Face Hub datasets,  all table data with separate columns for text and label
+- Use different splits
+    - Different train-test split percentage
+    - Different splits, configurations for Hugging Face Hub datasets
+- Test on machine/human only text by specifying predefined machine/human only dataset processing function
+
 #### **Supported dataset filetypes**
 - auto
 - csv
@@ -88,13 +103,14 @@ Only required parameter is the dataset filepath, other parameters will be filled
 In the CLI you also have to define a processor which will be a function that will process your selected dataset files into a unified data format. Unless you leave it on default, which takes your input dataset (that should constitute of a single file) and parses it using '--text_field' and '--label_field' (user-specified or the default) CLI arguments.
 
 ### **Processor definition**
+In case the provided functionality for parsing datasets is not enough, it is possible to define your own dataset processing function.
 A processor is a function defined in the `dataset_loader.py` source file as follows:
 
 **Name:** process_PROCESSOR-NAME (Here, PROCESSOR-NAME will be the selected name of your processor. This would be usually the name of the dataset)
 
-**Input:** 2 arguments: list of pandas dataframes for each dataset file, list of strings corresponding to the --dataset_other command-line argument 
+**Input:** 2 arguments: list of pandas dataframes for each dataset file, configuration dictionary holding the specifics configuration for the currently processed dataset 
 
-**Output:** a tuple of 2 lists with human and machine texts correspondingely
+**Output:** a dictionary of the following form: `{"train": {"text": ["example texts here...", "multiple.."], "label": [1,0,..]} , "test": {"text": ["example texts here...", "multiple.."], "label": [1,0,..]}}`
 
 **Examples usage could be:**
 
@@ -115,26 +131,6 @@ To integrate a new method, you need to define new `Experiment` subclass in the `
 To implement a new method, you can use one of the templates in the `methods/method_templates`. You will just have to fill in the not yet implemented methods and maybe tweak the `__init__()` constructor. 
 
 Remember to always implement the `run()` method (sometimes it's implemented in the parent class). It should always return a JSON-compatible dictionary of results as is defined below.
-
-### **Experiment constructor parameters**
-
-To correctly setup the input parameters in `__init__()` you will have to have a look at this line in `benchmark.py`:
-
-```python
-outputs = list(map(lambda obj: obj(data=data, 
-                                       model=base_model, 
-                                       tokenizer=base_tokenizer, 
-                                       DEVICE=DEVICE, 
-                                       detectLLM=args.detectLLM, 
-                                       batch_size=batch_size,
-                                       cache_dir=cache_dir,
-                                       args=args,
-                                       gptzero_key=args.gptzero_key
-                                       ).run(), filtered))
-```
-
-Each `Experiment` object is initialized with these parameters. We only use keyword (named) parameters, keep that in mind while naming your parameters in the `__init__()` constructor. 
-Optionally, we use `**kwargs` in `__init__()` parameters to catch remaining (unused) parameters.
 
 ### **Experiment output format**
 Each experiment run should return a JSON-compatible dictionary with results with at least the following items:
@@ -191,6 +187,8 @@ Currently, we are able to visualize:
     | UNC   | Unclear                   | 40-60% machine |
     | PTP   | Partially True Positive   | 60-80% machine |
     | TP    | True Positive             | 80-100% machine|
+- Per-method per-dataset running time
+- Per-method running time over multiple datasets
 
 You can add your own analysis method by defining it in the `results_analysis.py` source file.
 
