@@ -37,8 +37,6 @@ Currently, we support the following methods. To add a new method you can see the
 
 ## **Installation**
 
-> :warning: Currently it is not possible to clone the repository as it is **private**!
-
 ```bash
 git clone https://github.com/michalspiegel/IMGTB.git;
 cd IMGTB;
