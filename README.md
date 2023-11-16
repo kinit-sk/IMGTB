@@ -39,13 +39,22 @@ conda activate IMGTB
 ```
 
 ## **Usage**
-To run the benchmark on the SQuAD1 dataset: 
 ```python
-# Distinguish Human vs. ChatGPT - by default runs all methods:
+# Run benchmark on locally available test dataset 
+# By default runs all methods:
 python benchmark.py --dataset datasets/test_small.csv
 
-# Run only selected methods
+# Run only selected methods:
 python benchmark.py --dataset datasets/test_small.csv --methods EntropyMetric roberta-base-openai-detector
+
+# Run Hugging Face detectors on Hugging Face Hub dataset:
+python benchmark.py --dataset xzuyn/futurama-alpaca huggingfacehub machine_only output --methods roberta-base-openai-detector Hello-SimpleAI/chatgpt-detector-roberta
+
+# Specify different configurations through command-line arguments:
+python benchmark.py --dataset datasets/test_small.csv --methods EntropyMetric --base_model_name prajjwal1/bert-tiny
+
+# Run benchmark using a configurations file:
+python benchmark.py --from_config=example_config.yaml
 ```
 
 ## **Configuration**
@@ -79,7 +88,7 @@ We currently support all filetypes listed below, together with the following for
 - Default processor can parse all table data (including Hugging Face Hub datasets) with separate columns for text and label
 - Use different splits
     - Different train-test split percentage
-    - Different splits and configurations for Hugging Face Hub datasets
+    - Different subsets and splits for Hugging Face Hub datasets
 - Test on machine/human only text by specifying predefined machine/human only dataset processing function
 
 #### **Supported dataset filetypes**
