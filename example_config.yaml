@@ -3,7 +3,7 @@
 # They will not be passed (directly) to any library or detection method.
 global: 
   interactive: false
-  name: miracle_method_eval
+  name: example_results_log
 
 # Global parameters will be used with all datasets in the list, 
 # if not specified differently in the individual dataset parameters.
