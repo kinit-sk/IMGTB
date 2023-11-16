@@ -12,10 +12,11 @@ data:
   global:
     filetype: auto
   list:
-  - filepath: xzuyn/futurama-alpaca
+  - filepath: WxWx/ChatGPT-Detector-Bias
     filetype: huggingfacehub
-    processor: machine_only
-    text_field: output # Specify relevant column names for processing
+    text_field: text # Specify relevant column names for processing
+    label_field: kind
+    human_label: Human-Written # Specify the label used to indicate human-written text
 
   # Reference a Hugging Face Hub dataset with its identifier
   - filepath: yaful/DeepfakeTextDetect
@@ -39,23 +40,14 @@ methods:
   list:
   - name: MiracleMetric
   - name: MiracleMetric
+    clf_algo_for_threshold:
+      name: MLPClassifier
+      hidden_layer_sizes: [64, 32, 16]
     new_parameter: value # New parameters can be added on the flynew_parameter: value # New parameters can be added on the fly
   - name: LoglikelihoodMetric
   - name: LogRankMetric
   - name: EntropyMetric
   - name: DetectLLM_LLR
-  - name: MFDMetric
-    clf_algo_for_threshold:
-      name: MLPClassifier
-      hidden_layer_sizes: [64, 32, 16]
-  - name: DetectGPT
-  - name: DetectLLM_NPR
-  - name: DetectLLM_NPR
-    int8: True
-    pct_words_masked: 0.4
-    span_length: 3
-    n_perturbation_rounds: 2
-    n_perturbations: 5
   # Methods can be available locally or from Hugging Face
   - name: roberta-base-openai-detector
   - name: Hello-SimpleAI/chatgpt-detector-roberta
