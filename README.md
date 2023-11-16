@@ -1,57 +1,51 @@
 
 # **IMGTB: Integrated MGTBench Framework**
-A machine-generated text benchmarking framework, heavily based upon the original [MGTBench project](https://github.com/xinleihe/MGTBench), featuring additional funcionalities that make it easier to integrate custom datasets and new custom detection methods. 
+A machine-generated text benchmarking framework  based upon the original [MGTBench project](https://github.com/xinleihe/MGTBench), featuring additional funcionalities that make it easier to integrate custom datasets and new custom detection methods. 
 
 The framework also includes a couple of analysis tools for automatic analysis of the benchmark results.
-Namely, currently we are able to visualize:
-- Multiple metrics (Accuracy, Precision, Recall, F1 score) evaluated on the test data partition
-- F1 score for multiple different text length groups
-- Per-method (per-dataset) running time, running time over multiple datasets
-- Prediction probability histogram
-- Prediction probability error histogram (how often and by how much is the prediction off)
 
 ## **Supported Methods**
 Currently, we support the following methods. To add a new method you can see the documentation below:
 - Metric-based methods:
-    - Log-Likelihood [[Ref]](https://arxiv.org/abs/1908.09203);
-    - Rank [[Ref]](https://arxiv.org/abs/1906.04043);
-    - Log-Rank [[Ref]](https://arxiv.org/abs/2301.11305);
-    - Entropy [[Ref]](https://arxiv.org/abs/1906.04043);
-    - GLTR Test 2 Features (Rank Counting) [[Ref]](https://arxiv.org/abs/1906.04043);
-    - DetectGPT [[Ref]](https://arxiv.org/abs/2301.11305);
-    - DetectLLM-LLR [[Ref]](https://arxiv.org/abs/2306.05540);
-    - DetectLLM-NPR [[Ref]](https://arxiv.org/abs/2306.05540);
-    - Multi-Feature Detection [[Ref]](https://www.researchsquare.com/article/rs-3226684/v1)
-    - LLM Deviation [[Ref]](https://www.researchsquare.com/article/rs-3226684/v1)
+    - [Log-Likelihood](https://arxiv.org/abs/1908.09203)
+    - [Rank](https://arxiv.org/abs/1906.04043)
+    - [Log-Rank](https://arxiv.org/abs/2301.11305)
+    - [Entropy](https://arxiv.org/abs/1906.04043)
+    - [GLTR Test 2 Features (Rank Counting)](https://arxiv.org/abs/1906.04043)
+    - [DetectGPT](https://arxiv.org/abs/2301.11305)
+    - [DetectLLM-LLR](https://arxiv.org/abs/2306.05540)
+    - [DetectLLM-NPR](https://arxiv.org/abs/2306.05540)
+    - [Multi-Feature Detection](https://www.researchsquare.com/article/rs-3226684/v1)
+    - [LLM Deviation](https://www.researchsquare.com/article/rs-3226684/v1)
 - Model-based methods:
-    - RoBERTa Base OpenAI Detector [[Ref]](https://huggingface.co/roberta-base-openai-detector)
-    - RoBERTa Large OpenAI Detector [[Ref]](https://huggingface.co/roberta-large-openai-detector)
-    - ChatGPT-detector-RoBERTa [[Ref]](https://huggingface.co/Hello-SimpleAI/chatgpt-detector-roberta)
-    - detection-longformer [[Ref]](https://huggingface.co/nealcly/detection-longformer)
-    - arincon/roberta-base-autextification-detection [[Ref]](https://huggingface.co/arincon/roberta-base-autextification-detection)
-    - orzhan/ruroberta-ruatd-binary [[Ref]](https://huggingface.co/orzhan/ruroberta-ruatd-binary)
-    - andreas122001/roberta-mixed-detector [[Ref]](https://huggingface.co/andreas122001/roberta-mixed-detector)
+    - [RoBERTa Base OpenAI Detector](https://huggingface.co/roberta-base-openai-detector)
+    - [RoBERTa Large OpenAI Detector](https://huggingface.co/roberta-large-openai-detector)
+    - [ChatGPT-detector-RoBERTa](https://huggingface.co/Hello-SimpleAI/chatgpt-detector-roberta)
+    - [detection-longformer](https://huggingface.co/nealcly/detection-longformer)
+    - [arincon/roberta-base-autextification-detection](https://huggingface.co/arincon/roberta-base-autextification-detection)
+    - [orzhan/ruroberta-ruatd-binary](https://huggingface.co/orzhan/ruroberta-ruatd-binary)
+    - [andreas122001/roberta-mixed-detector](https://huggingface.co/andreas122001/roberta-mixed-detector)
     - Any other HuggingFace text classification model
 - Other
-    - GPTZero [[Ref]](https://gptzero.me/)
+    - [GPTZero](https://gptzero.me/)
 
 ## **Installation**
 
 ```bash
-git clone https://github.com/michalspiegel/IMGTB.git;
-cd IMGTB;
-conda env create -f environment.yaml;
-conda activate IMGTB;
+git clone https://github.com/michalspiegel/IMGTB.git
+cd IMGTB
+conda env create -f environment.yaml
+conda activate IMGTB
 ```
 
 ## **Usage**
 To run the benchmark on the SQuAD1 dataset: 
 ```python
 # Distinguish Human vs. ChatGPT - by default runs all methods:
-python benchmark.py --dataset datasets/SQuAD1_LLMs.csv auto SQuAD1 text label 0 ChatGPT
+python benchmark.py --dataset datasets/test_small.csv
 
 # Run only selected methods
-python benchmark.py --dataset datasets/SQuAD1_LLMs.csv auto SQuAD1 text label 0 ChatGPT --methods RankMetric EntropyMetric
+python benchmark.py --dataset datasets/test_small.csv --methods EntropyMetric roberta-base-openai-detector
 ```
 
 ## **Configuration**
@@ -61,16 +55,18 @@ You can specify parameters for the benchmark run in two ways:
 - Create a YAML configuration file
 
 ### **Command-line arguments**
-To see a summarization of all of the command-line arguments and options, see either the help message or the `lib/config.py` source file.
+To see a summarization of all of the command-line arguments and options, see either the help message (by including the `--help` option in your c) or the `lib/config.py` source file.
 ### **YAML configuration file** 
 See example configuration file at `example_config.yaml` explaining most of the available features, or see `lib/default_config.yaml` to see all currently supported parameters.
 ## **Support for custom dataset integration**
 ### **Dataset parameters**
-In the CLI you will have to define a path to your dataset file (or a folder, if your dataset is constructed from multiple files).
+ Most importantly, a filepath to the dataset will have to specified (or a folder, if your dataset is constructed from multiple files).
+ > We support loading datasets that consist of multiple separate files, just put them into one common directory and put its filepath as the dataset filepath.
+ (However, in this case, you will probably have to define your own dataset processing function, see below for more details on this)
 
 You can define multiple datasets, that way your chosen MGTD methods will be evaluated against multiple datasets. To define more than one dataset use the `--dataset` option for each dataset. E.g.:
 ```bash
-python benchmark.py --dataset datasets/test_dataset.csv --dataset datasets/test_dataset2.csv
+python benchmark.py --dataset datasets/test_small.csv --dataset datasets/test_small_dir auto test_small_dir
 ```
 The general dataset definition or usage of the `--dataset` option would be:
 ```bash
@@ -80,10 +76,10 @@ Only required parameter is the dataset filepath, other parameters will be filled
 
 ### **Supported dataset formats**
 We currently support all filetypes listed below, together with the following formats:
-- Default processor can parse Hugging Face Hub datasets,  all table data with separate columns for text and label
+- Default processor can parse all table data (including Hugging Face Hub datasets) with separate columns for text and label
 - Use different splits
     - Different train-test split percentage
-    - Different splits, configurations for Hugging Face Hub datasets
+    - Different splits and configurations for Hugging Face Hub datasets
 - Test on machine/human only text by specifying predefined machine/human only dataset processing function
 
 #### **Supported dataset filetypes**
@@ -98,17 +94,28 @@ We currently support all filetypes listed below, together with the following for
 - huggingfacehub
 
 ### **Dataset processors**
-In the CLI you also have to define a processor which will be a function that will process your selected dataset files into a unified data format. Unless you leave it on default, which takes your input dataset (that should constitute of a single file) and parses it using '--text_field' and '--label_field' (user-specified or the default) CLI arguments.
+In the special case, that the default processor cannot parse the chosen dataset, a processor function will have to be specifing in the dataset parameters. This is a function that will process your selected dataset files into a unified data format. 
 
 ### **Processor definition**
 In case the provided functionality for parsing datasets is not enough, it is possible to define your own dataset processing function.
-A processor is a function defined in the `dataset_loader.py` source file as follows:
+A processor is a function defined in the `lib/dataset_loader.py` source file as follows:
 
 **Name:** process_PROCESSOR-NAME (Here, PROCESSOR-NAME will be the selected name of your processor. This would be usually the name of the dataset)
 
 **Input:** 2 arguments: list of pandas dataframes for each dataset file, configuration dictionary holding the specifics configuration for the currently processed dataset 
 
-**Output:** a dictionary of the following form: `{"train": {"text": ["example texts here...", "multiple.."], "label": [1,0,..]} , "test": {"text": ["example texts here...", "multiple.."], "label": [1,0,..]}}`
+**Output:** a dictionary of the following form: 
+```
+{"train": {
+    "text": ["example texts here",...], 
+    "label": [1,0,..]
+    }, 
+ "test": {
+    "text": ["example texts here",...], 
+    "label": [1,0,..]
+    }
+}
+```
 
 **Examples usage could be:**
 
@@ -125,6 +132,8 @@ This will tie to the `process_myAwesomeDatasetProcessor()` function (it must be 
 To integrate a new method, you need to define new `Experiment` subclass in the `methods/implemented_methods directory`. The main script in `benchmark.py` will automatically detect (unless you choose otherwise by configuring the `--methods` option) your new method and evaluate it on your chosen dataset.
 
 ### **How to implement a new Experiment subclass**
+
+> If implementing a new metric-based or perturbation-based method, it might be useful to implement on of our abstract classes in `methods/abstract_methods/` which will implement a lot of functionality for you, leaving up to you to implement just the specific metric/scoring function.  
 
 To implement a new method, you can use one of the templates in the `methods/method_templates`. You will just have to fill in the not yet implemented methods and maybe tweak the `__init__()` constructor. 
 
@@ -154,7 +163,7 @@ At the same time, results of each method and dataset combination will be saved i
 
 ## **Results analysis**
 
-> :warning: Currently it is only possible to run analysis on logs (whole benchmark results). Support for the analysis of the separate method/dataset results will be added.
+> Currently it is only possible to run analysis on logs (whole benchmark results). Support for the analysis of the separate method/dataset results will be added.
 
 Results analysis will be run after each benchmark run.
 
@@ -172,18 +181,18 @@ Currently, we are able to visualize:
     | Label |                          |  Prediction Probability |
     | ----- | ------------------------ | -------------- |
     | TN    | True Negative            | 0-20% machine  |
-    | PTN   | Partially True Negative  | 20-40% machine |
+    | PTN   | Potentially True Negative  | 20-40% machine |
     | UNC   | Unclear                  | 40-60% machine |
-    | PFP   | Partially False Positive | 60-80% machine |
+    | PFP   | Potentially False Positive | 60-80% machine |
     | FP    | False Positive           | 80-100% machine|
 
 - False Negatives Analysis - Analyzes the predictions for solely the positive samples. It uses the following terminology:
     | Label |                           |  Prediction Probability |
     | ----- | ------------------------- | -------------- |
     | FN    | False Negative            | 0-20% machine  |
-    | PFN   | Partially False Negative  | 20-40% machine |
+    | PFN   | Potentially False Negative  | 20-40% machine |
     | UNC   | Unclear                   | 40-60% machine |
-    | PTP   | Partially True Positive   | 60-80% machine |
+    | PTP   | Potentially True Positive   | 60-80% machine |
     | TP    | True Positive             | 80-100% machine|
 - Per-method per-dataset running time
 - Per-method running time over multiple datasets
