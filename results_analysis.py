@@ -29,7 +29,7 @@ def _find_interval_label(labeled_intervals, num):
 def analyze_test_metrics(results_list, save_path, is_interactive: bool):
   for dataset_name, dataset_results in results_list.items():
     results = pd.Series()
-    for detector in dataset_results:
+    for detector in dataset_results.values():
       results = pd.concat([results, pd.DataFrame({'Detector': detector["name"], 
                                                   'Accuracy': detector["metrics_results"]["test"]['acc'], 
                                                   'Precision': detector["metrics_results"]["test"]['precision'], 
@@ -86,9 +86,9 @@ def analyze_running_time(results_list, save_path: str, is_interactive: bool) -> 
   
   for dataset_name, dataset_results in results_list.items():
     results = pd.Series()
-    data_word_count = _get_num_of_tokens(dataset_results[0]["input_data"]["train"]["text"] + 
-                                         dataset_results[0]["input_data"]["test"]["text"])
-    for detector in dataset_results:
+    data_word_count = _get_num_of_tokens(next(iter(dataset_results.values()))["input_data"]["train"]["text"] + 
+                                         next(iter(dataset_results.values()))["input_data"]["test"]["text"])
+    for detector in dataset_results.values():
       results = pd.concat([results, pd.DataFrame({'Detector': detector["name"], 
                                                   'RunningTimeSeconds': detector["running_time_seconds"],
                                                   'RunningTimeSecondsPerWord': detector["running_time_seconds"] / data_word_count}, index=[0])], copy=False, ignore_index=True)
@@ -118,9 +118,9 @@ def analyze_running_time_over_multiple_datasets(results_list, save_path: str, is
   """
   results = pd.DataFrame()
   for dataset_name, dataset_results in results_list.items():
-      data_word_count = _get_num_of_tokens(dataset_results[0]["input_data"]["train"]["text"] + 
-                                           dataset_results[0]["input_data"]["test"]["text"])
-      for detector in dataset_results:
+      data_word_count = _get_num_of_tokens(next(iter(dataset_results.values()))["input_data"]["train"]["text"] + 
+                                           next(iter(dataset_results.values()))["input_data"]["test"]["text"])
+      for detector in dataset_results.values():
         results = pd.concat([results, pd.DataFrame({'Detector': detector["name"],
                                                     'Dataset': dataset_name,
                                                     'RunningTimeSeconds': detector["running_time_seconds"],
@@ -150,7 +150,7 @@ def analyze_text_lengths(results_list, save_path, is_interactive: bool):
   for dataset_name, dataset_results in results_list.items():
     lengths_groups = [[0, 50], [50, 100], [100, 200], [200, 500], [500, 100000]]
     results = pd.DataFrame()
-    for detector in dataset_results:
+    for detector in dataset_results.values():
       detector_data = pd.DataFrame({"text": detector["input_data"]["test"]["text"], 
                                   "label": detector["input_data"]["test"]["label"], 
                                   "prediction": detector["predictions"]["test"],
@@ -188,7 +188,7 @@ def analyze_pred_prob_hist(results_list, save_path, is_interactive: bool):
   """
   for dataset_name, dataset_results in results_list.items():
     results = pd.DataFrame()
-    for detector in dataset_results:
+    for detector in dataset_results.values():
       results = pd.concat([results, pd.DataFrame({detector["name"]: detector["machine_prob"]["test"]})], axis="columns", copy=False)  
     fig = plt.figure(figsize=(10, 10))
     fig.suptitle(f"{dataset_name}/Prediction Probability Histograms", fontsize=16)
@@ -214,7 +214,7 @@ def analyze_pred_prob_error_hist(results_list, save_path, is_interactive: bool):
   """
   for dataset_name, dataset_results in results_list.items():
     results = pd.DataFrame()
-    for detector in dataset_results:
+    for detector in dataset_results.values():
       results = pd.concat([results, pd.DataFrame(
         {detector["name"]: abs(np.array(detector["machine_prob"]["test"]) - np.array(detector["input_data"]["test"]["label"]))
          })], axis="columns", copy=False)  
@@ -259,7 +259,7 @@ def analyze_false_positives(results_list, save_path, is_interactive: bool):
                     "UNC": "float64", 
                     "PFP": "float64", 
                     "FP": "float64"})
-    for detector in dataset_results:
+    for detector in dataset_results.values():
       pred_data = pd.DataFrame({
         "pred_prob": detector["machine_prob"]["test"], 
         "true_label": detector["input_data"]["test"]["label"]})
@@ -318,7 +318,7 @@ def analyze_false_negatives(results_list, save_path, is_interactive: bool):
                     "UNC": "float64", 
                     "PTP": "float64", 
                     "TP": "float64"})
-    for detector in dataset_results:
+    for detector in dataset_results.values():
       pred_data = pd.DataFrame({
         "pred_prob": detector["machine_prob"]["test"], 
         "true_label": detector["input_data"]["test"]["label"]})
@@ -392,7 +392,7 @@ def list_available_analysis_methods():
 def make_method_names_unique(results):
   for _, dataset in results.items():
     name_counts = dict()
-    for method in dataset:
+    for method in dataset.values():
       count = name_counts.get(method["name"], 0)
       name_counts[method["name"]] = count + 1
       if name_counts[method["name"]] > 1:

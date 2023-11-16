@@ -74,12 +74,12 @@ def run_benchmark(dataset_dict, config):
     
     for dataset_name, data in dataset_dict.items():
         print_w_sep_line(f"Running experiments on {dataset_name} dataset:\n", config["global"]["interactive"])    
-        outputs[dataset_name] = []
+        outputs[dataset_name] = {}
             
         for method_config in config["methods"]["list"]:
             
             if method_config["name"] == "all":
-                outputs[dataset_name].extend(run_all_available(data, method_config, available_experiments))
+                outputs[dataset_name].update(run_all_available(data, method_config, available_experiments))
                 continue
             
             try:
@@ -91,16 +91,17 @@ def run_benchmark(dataset_dict, config):
                 print(traceback.format_exc(), file=sys.stderr)
                 continue
             
-            outputs[dataset_name].append(results)
+            outputs[dataset_name][method_config["name"]] = results
     
     return outputs
 
 
 def run_all_available(data, method_config, available_experiments):
-    results = []
+    results = {}
     for experiment in available_experiments:
         try:
-            results.append(experiment(data=data, config=method_config).run())
+            experiment_instance = experiment(data=data, config=method_config)
+            results[experiment_instance.name] = (experiment_instance.run())
         except Exception:
             print(f"Experiment {method_config['name']} failed. Skipping and continuing with the next experiment.")
             # Print detailed error message to stderr
@@ -168,8 +169,8 @@ def save_method_dataset_combination_results(methods_config, outputs):
     if methods_config[0]["name"] == "all":
         is_all = True
     
-    for dataset_name, results_list in outputs.items():
-        for method_results, method_config in zip_longest(results_list, methods_config):
+    for dataset_name, results_dict in outputs.items():
+        for method_results, method_config in zip_longest(results_dict.values(), methods_config):
             if method_results is None:
                 continue
             method_name = method_results["name"].replace("/", "-") # slash would create nested directory
