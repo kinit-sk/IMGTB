@@ -174,6 +174,7 @@ def save_method_dataset_combination_results(methods_config, outputs):
             if method_results is None:
                 continue
             method_name = method_results["name"].replace("/", "-") # slash would create nested directory
+            dataset_name = dataset_name.replace("/", "-")
             if is_all:
                 method_config = methods_config[0]
             SAVE_PATH =  os.path.join(LOG_METHOD_W_DATASET_PATH, method_name, dataset_name)

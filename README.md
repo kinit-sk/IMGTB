@@ -183,6 +183,7 @@ results_analysis.py results/logs/SOME_BENCHMARK_RESULTS.json SAVE_PATH
 
 Currently, we are able to visualize:
 - Multiple metrics (Accuracy, Precision, Recall, F1 score) evaluated on the test data partition
+- ROC curve analysis for metric-based methods
 - F1 score for multiple different text length groups
 - Prediction Probability Distribution - How much and how often is the detection method sure of its predictions
 - Prediction Probability Error Distribution - How far was the prediction from true label, how often

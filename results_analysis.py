@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, RocCurveDisplay
 import seaborn as sns
 from math import ceil, sqrt
 import os
@@ -74,6 +74,30 @@ def _get_num_of_tokens(data: List[str]):
     newlines = text_data.count('\n')
     word_count += spaces+tabs+newlines
   return word_count
+
+def analyze_roc_for_metric_methods(results_list, save_path: str, is_interactive: bool) -> None:
+  """
+  This function requires each experiment in the results list
+  to have a 'criterion' item in its benchmark results 
+  (that is each detection method should be metric-based)
+  """
+  for dataset_name, dataset_results in results_list.items():
+    rows = cols = ceil(sqrt(len(dataset_results.values())))
+    fig = plt.figure(figsize=(10, 10))
+    fig.suptitle(f"{dataset_name}/ROC Analysis", fontsize=16)
+    
+    for i, detector in enumerate(dataset_results.values()):
+      if detector.get("criterion") is None:
+        print(f"Skipping {detector['name']}, because of missing scores data (criterion).")
+        continue
+      ax = plt.subplot(rows, cols, i+1)
+      RocCurveDisplay.from_predictions(detector["input_data"]["test"]["label"], detector["criterion"]["test"], ax=ax)
+
+      
+    fig.tight_layout()
+    plt.savefig(os.path.join(save_path, f"{dataset_name}_roc_analysis.png"), dpi=600)
+    if is_interactive:
+      plt.show()
 
 
 def analyze_running_time(results_list, save_path: str, is_interactive: bool) -> None:
@@ -362,14 +386,17 @@ sns.set()
 
 def run_full_analysis(results, methods, save_path, is_interactive: bool):  
   method_names = list(map(lambda method: method["name"], methods))
+  available = list(map(lambda fn: fn.__name__,FULL_ANALYSIS))
   results = make_method_names_unique(results)
-  for fn in FULL_ANALYSIS:
-    if fn.__name__ not in method_names and method_names[0] != "all":
+  for method_name in method_names:
+    if method_name not in available and method_names[0] != "all":
+      print(f"Unknown analysis method {method_name}")
       continue
     try:
-      fn(results, save_path, is_interactive)
+      i = available.index(method_name)
+      FULL_ANALYSIS[i](results, save_path, is_interactive)
     except Exception:
-      print(f"Analysis with the function {fn.__name__} failed due to below reasons. Skipping and continuing with the next function.")
+      print(f"Analysis with the function {FULL_ANALYSIS[i].__name__} failed due to below reasons. Skipping and continuing with the next function.")
       print(traceback.format_exc())
     
 
@@ -381,6 +408,7 @@ def run_full_analysis_from_file(filepath: str, save_path: str):
 
 def list_available_analysis_methods():
   print("analyze_test_metrics     ...   Separate barplot for each tested metric (Accuracy, Precision, Recall, F1 score) comparing the performance of different methods")
+  print("analyze_roc_for_metric_based   ... Visualize per-dataset per-method ROC curve (+AUC)")
   print("analyze_text_lengths     ...   Barplot and a lineplot of F1 score evaluated on different text lengths")
   print("pred_prob_hist           ...   For each method evaluated on a given dataset, show a histogram of prediction probability values (probability that a text is machine-generated)")
   print("pred_prob_error_hist     ...   For each method evaluated on a given dataset, show a histogram of errors in prediction (how far was the prediction from true label, how often)")
