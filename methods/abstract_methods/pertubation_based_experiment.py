@@ -177,6 +177,7 @@ class PertubationBasedExperiment(Experiment):
                 'input_data': self.data,
                 'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
                 'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
+                'criterion': {'train': train_predictions, 'test': test_predictions},
                 'running_time_seconds': time.time() - self.start_time,
                 'metrics_results': {
                     'train': {
@@ -196,7 +197,8 @@ class PertubationBasedExperiment(Experiment):
                     'pct_words_masked': args["pct_words_masked"],
                     'span_length': span_length,
                     'n_perturbations': n_perturbations,
-                }
+                },
+                "config": self.config
             }
         
 

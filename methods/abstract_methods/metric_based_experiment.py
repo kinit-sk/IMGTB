@@ -95,5 +95,6 @@ class MetricBasedExperiment(Experiment):
                     'recall': recall_test,
                     'f1': f1_test
                 }
-            }
+            },
+            "config": self.config
         }

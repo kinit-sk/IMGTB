@@ -44,6 +44,7 @@ class GPTZero(Experiment):
         name = self.__class__.__name__ # Set your own name or leave it set to the class name
         super().__init__(data, name)
         self.gptzero_key = config["gptzero_key"]
+        self.config = config
      
      def run(self):
         start_time = time.time()
@@ -90,6 +91,7 @@ class GPTZero(Experiment):
                     'recall': recall_test,
                     'f1': f1_test
                 }
-            }
+            },
+            "config": self.config
         }
 

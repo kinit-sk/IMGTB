@@ -129,7 +129,6 @@ def process_default(data: Dict[str, pd.DataFrame], config) -> pd.DataFrame:
         data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=data["label"])
     except ValueError:
         data_train, data_test = train_test_split(data, test_size=config["test_size"], random_state=42, shuffle=config["shuffle"], stratify=None)
-
     return {"train": data_train.reset_index().to_dict(orient='list'), "test": data_test.reset_index().to_dict(orient='list')}
 
 

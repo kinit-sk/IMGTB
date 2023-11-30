@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
-from sklearn.metrics import classification_report, RocCurveDisplay
+from sklearn.metrics import classification_report, RocCurveDisplay, roc_auc_score
 import seaborn as sns
 from math import ceil, sqrt
 import os
@@ -75,23 +75,23 @@ def _get_num_of_tokens(data: List[str]):
     word_count += spaces+tabs+newlines
   return word_count
 
-def analyze_roc_for_metric_methods(results_list, save_path: str, is_interactive: bool) -> None:
+def analyze_roc_curve(results_list, save_path: str, is_interactive: bool) -> None:
   """
   This function requires each experiment in the results list
-  to have a 'criterion' item in its benchmark results 
-  (that is each detection method should be metric-based)
+  to have either 'criterion' or a 'predictions' item in its benchmark results 
   """
   for dataset_name, dataset_results in results_list.items():
-    rows = cols = ceil(sqrt(len(dataset_results.values())))
-    fig = plt.figure(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(10, 10))
     fig.suptitle(f"{dataset_name}/ROC Analysis", fontsize=16)
     
     for i, detector in enumerate(dataset_results.values()):
-      if detector.get("criterion") is None:
-        print(f"Skipping {detector['name']}, because of missing scores data (criterion).")
-        continue
-      ax = plt.subplot(rows, cols, i+1)
-      RocCurveDisplay.from_predictions(detector["input_data"]["test"]["label"], detector["criterion"]["test"], ax=ax)
+      # Test if detector has criterion (metric score) and if the score is strictly one-dimensional
+      y_score = detector["criterion"]["test"] if detector.get("criterion") is not None and len(detector["criterion"]["test"][0]) == 1 else detector["machine_prob"]["test"]
+      RocCurveDisplay.from_predictions(detector["input_data"]["test"]["label"], 
+                                       y_score,
+                                       name=f"{detector['name']}-{detector['config']['clf_algo_for_threshold']['name']}", 
+                                       ax=ax,
+                                       pos_label = 1 if roc_auc_score(detector["input_data"]["test"]["label"], y_score) else 0)
 
       
     fig.tight_layout()
@@ -389,26 +389,39 @@ def run_full_analysis(results, methods, save_path, is_interactive: bool):
   available = list(map(lambda fn: fn.__name__,FULL_ANALYSIS))
   results = make_method_names_unique(results)
   for method_name in method_names:
-    if method_name not in available and method_names[0] != "all":
+    if method_name not in available and method_name != "all":
       print(f"Unknown analysis method {method_name}")
       continue
+    if method_name == "all":
+      run_all_available(results, save_path, is_interactive)
+      continue
+    
+    i = available.index(method_name)
     try:
-      i = available.index(method_name)
       FULL_ANALYSIS[i](results, save_path, is_interactive)
     except Exception:
       print(f"Analysis with the function {FULL_ANALYSIS[i].__name__} failed due to below reasons. Skipping and continuing with the next function.")
       print(traceback.format_exc())
-    
+
+def run_all_available(results, save_path, is_interactive: bool):
+  results = make_method_names_unique(results)
+  for fn in FULL_ANALYSIS:
+    try:
+      fn(results, save_path, is_interactive)
+    except:
+      print(f"Analysis with the function {fn.__name__} failed due to below reasons. Skipping and continuing with the next function.")
+      print(traceback.format_exc())
+      
 
 def run_full_analysis_from_file(filepath: str, save_path: str):
   with open(filepath, "r") as file:
-    results = json.load(file, parse_float=True)
-    run_full_analysis(results, save_path, is_interactive=True)
+    results = json.load(file)
+    run_full_analysis(results, [{"name": "all"}], save_path, is_interactive=False)
 
 
 def list_available_analysis_methods():
   print("analyze_test_metrics     ...   Separate barplot for each tested metric (Accuracy, Precision, Recall, F1 score) comparing the performance of different methods")
-  print("analyze_roc_for_metric_based   ... Visualize per-dataset per-method ROC curve (+AUC)")
+  print("analyze_roc_curve        ...   Visualize per-dataset per-method ROC curve (+AUC) (For metric-based method, ROC is computed from metric scores. For model-based/other, ROC is computed from the output of the classifier)")
   print("analyze_text_lengths     ...   Barplot and a lineplot of F1 score evaluated on different text lengths")
   print("pred_prob_hist           ...   For each method evaluated on a given dataset, show a histogram of prediction probability values (probability that a text is machine-generated)")
   print("pred_prob_error_hist     ...   For each method evaluated on a given dataset, show a histogram of errors in prediction (how far was the prediction from true label, how often)")
@@ -431,5 +444,5 @@ if __name__ == '__main__':
   if len(sys.argv) != 3:
     print("Please, specify file to run the analysis on and a save path to store analysis results. Aborting...")
     exit(1)
-  run_full_analysis_from_file(sys.args[1], sys.args[2])
+  run_full_analysis_from_file(sys.argv[1], sys.argv[2])
   

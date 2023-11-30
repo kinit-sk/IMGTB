@@ -92,6 +92,7 @@ class GLTRMetric(MetricBasedExperiment):
             'input_data': self.data,
             'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
             'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
+            'criterion': {'train': train_criterion, 'test': test_criterion},
             'running_time_seconds': time.time() - start_time,
             'metrics_results': {
                 'train': {
@@ -106,5 +107,6 @@ class GLTRMetric(MetricBasedExperiment):
                     'recall': recall_test,
                     'f1': f1_test
                 }
-            }
+            },
+            "config": self.config
         }

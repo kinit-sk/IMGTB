@@ -164,6 +164,7 @@ def get_clf_results(x_train, y_train, x_test, y_test, config):
 
     y_test_pred = clf.predict(x_test)
     y_test_pred_prob = clf.predict_proba(x_test)
+    
     y_test_pred_prob = [_[1] for _ in y_test_pred_prob]
     acc_test, precision_test, recall_test, f1_test, auc_test = cal_metrics(
         y_test, y_test_pred, y_test_pred_prob)

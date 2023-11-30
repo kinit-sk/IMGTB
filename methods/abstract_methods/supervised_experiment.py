@@ -46,6 +46,7 @@ class SupervisedExperiment(Experiment):
         self.num_labels = config["num_labels"]
         self.epochs = config["epochs"]
         self.model_output_machine_label = config["model_output_machine_label"]
+        self.config = config
 
     @timeit
     def run(self):
@@ -166,8 +167,9 @@ class SupervisedExperiment(Experiment):
                     "precision": precision_test,
                     "recall": recall_test,
                     "f1": f1_test,
-                },
+                }
             },
+            "config": self.config
         }
 
 
