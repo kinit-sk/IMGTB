@@ -163,7 +163,8 @@ class PertubationBasedExperiment(Experiment):
 
             x_test = test_predictions
             #x_test = np.expand_dims(x_test, axis=-1)
-            y_test = [_['label'] for _ in results['test']]
+            y_test = [_['label'] for _ in results['t
+55M     ./.gitest']]
 
             train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test, config=self.config)
             acc_train, precision_train, recall_train, f1_train, auc_train = train_res
@@ -177,7 +178,7 @@ class PertubationBasedExperiment(Experiment):
                 'input_data': self.data,
                 'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
                 'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
-                'criterion': {'train': train_predictions, 'test': test_predictions},
+                'criterion': {'train': [elem.tolist() for elem in train_predictions], 'test': [elem.tolist() for elem in test_predictions]},
                 'running_time_seconds': time.time() - self.start_time,
                 'metrics_results': {
                     'train': {

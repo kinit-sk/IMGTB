@@ -80,6 +80,7 @@ class SupervisedExperiment(Experiment):
                 self.pos_bit,
                 self.num_labels,
                 epochs=self.epochs,
+                self.config
             )
 
         train_text = self.data["train"]["text"]
