@@ -1,7 +1,7 @@
 from methods.abstract_methods.experiment import Experiment
 from methods.utils import timeit, cal_metrics
 import transformers
-from transformers import AdamW
+from transformers import AdamW, TrainingArguments, Trainer, DataCollatorWithPadding
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -75,11 +75,6 @@ class SupervisedExperiment(Experiment):
                 detector,
                 tokenizer,
                 self.data,
-                self.batch_size,
-                self.DEVICE,
-                self.pos_bit,
-                self.num_labels,
-                epochs=self.epochs,
                 self.config
             )
 
@@ -240,17 +235,18 @@ def get_supervised_model_prediction_multi_classes(
 
 
 def fine_tune_model(
-    model, tokenizer, data, batch_size, DEVICE, pos_bit=1, num_labels=2, epochs=3
+    model, tokenizer, data, config
 ):
 
     # https://huggingface.co/transformers/v3.2.0/custom_datasets.html
-
+    DEVICE = config["DEVICE"]
+        
     train_text = data["train"]["text"]
     train_label = data["train"]["label"]
     test_text = data["test"]["text"]
     test_label = data["test"]["label"]
 
-    if pos_bit == 0 and num_labels == 2:
+    if config["pos_bit"] == 0 and config["num_labels"] == 2:
         train_label = [1 if _ == 0 else 0 for _ in train_label]
         test_label = [1 if _ == 0 else 0 for _ in test_label]
 
@@ -261,7 +257,7 @@ def fine_tune_model(
 
     model.train()
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
 
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
@@ -284,7 +280,7 @@ def fine_tune_model(
     ]
     optimizer = AdamW(optimizer_grouped_parameters, lr=1e-5)
 
-    for epoch in range(epochs):
+    for epoch in range(config["epochs"]):
         for batch in tqdm(train_loader, desc=f"Fine-tuning: {epoch} epoch"):
             optimizer.zero_grad()
             input_ids = batch["input_ids"].to(DEVICE)
@@ -295,3 +291,87 @@ def fine_tune_model(
             loss.backward()
             optimizer.step()
     model.eval()
+    
+def preprocess_function(examples, **fn_kwargs):
+    return fn_kwargs['tokenizer'](examples["text"], truncation=True)
+
+
+def get_data(train_path, test_path, random_seed):
+    """
+    function to read dataframe with columns
+    """
+
+    train_df = pd.read_json(train_path, lines=True)
+    test_df = pd.read_json(test_path, lines=True)
+    
+    train_df, val_df = train_test_split(train_df, test_size=0.2, stratify=train_df['label'], random_state=random_seed)
+
+    return train_df, val_df, test_df
+
+def compute_metrics(eval_pred):
+
+    f1_metric = evaluate.load("f1")
+
+    predictions, labels = eval_pred
+    predictions = np.argmax(predictions, axis=1)
+    
+    results = {}
+    results.update(f1_metric.compute(predictions=predictions, references = labels, average="micro"))
+
+    return results
+
+
+def fine_tune(train_df, valid_df, checkpoints_path, id2label, label2id, model):
+
+    # pandas dataframe to huggingface Dataset
+    train_dataset = Dataset.from_pandas(train_df)
+    valid_dataset = Dataset.from_pandas(valid_df)
+    
+    # get tokenizer and model from huggingface
+    tokenizer = AutoTokenizer.from_pretrained(model)     # put your model here
+    model = AutoModelForSequenceClassification.from_pretrained(
+       model, num_labels=len(label2id), id2label=id2label, label2id=label2id    # put your model here
+    )
+    
+    # tokenize data for train/valid
+    tokenized_train_dataset = train_dataset.map(preprocess_function, batched=True, fn_kwargs={'tokenizer': tokenizer})
+    tokenized_valid_dataset = valid_dataset.map(preprocess_function, batched=True,  fn_kwargs={'tokenizer': tokenizer})
+    
+
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+
+
+    # create Trainer 
+    training_args = TrainingArguments(
+        output_dir=checkpoints_path,
+        learning_rate=2e-5,
+        per_device_train_batch_size=16,
+        per_device_eval_batch_size=16,
+        num_train_epochs=3,
+        weight_decay=0.01,
+        evaluation_strategy="epoch",
+        save_strategy="epoch",
+        load_best_model_at_end=True,
+    )
+
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=tokenized_train_dataset,
+        eval_dataset=tokenized_valid_dataset,
+        tokenizer=tokenizer,
+        data_collator=data_collator,
+        compute_metrics=compute_metrics,
+    )
+
+    trainer.train()
+
+    # save best model
+    best_model_path = checkpoints_path+'/best/'
+    
+    if not os.path.exists(best_model_path):
+        os.makedirs(best_model_path)
+    
+
+    trainer.save_model(best_model_path)
+

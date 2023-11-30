@@ -163,8 +163,7 @@ class PertubationBasedExperiment(Experiment):
 
             x_test = test_predictions
             #x_test = np.expand_dims(x_test, axis=-1)
-            y_test = [_['label'] for _ in results['t
-55M     ./.gitest']]
+            y_test = [_['label'] for _ in results['test']]
 
             train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test, config=self.config)
             acc_train, precision_train, recall_train, f1_train, auc_train = train_res

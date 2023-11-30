@@ -92,7 +92,7 @@ class GLTRMetric(MetricBasedExperiment):
             'input_data': self.data,
             'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
             'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
-            'criterion': {'train': train_criterion, 'test': test_criterion},
+            'criterion': {'train': [elem.tolist() for elem in train_criterion], 'test': [elem.tolist() for elem in test_criterion]},
             'running_time_seconds': time.time() - start_time,
             'metrics_results': {
                 'train': {
