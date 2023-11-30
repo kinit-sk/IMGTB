@@ -91,7 +91,7 @@ def analyze_roc_curve(results_list, save_path: str, is_interactive: bool) -> Non
                                        y_score,
                                        name=f"{detector['name']}-{detector['config']['clf_algo_for_threshold']['name']}", 
                                        ax=ax,
-                                       pos_label = 1 if roc_auc_score(detector["input_data"]["test"]["label"], y_score) else 0)
+                                       pos_label = 1 if roc_auc_score(detector["input_data"]["test"]["label"], y_score) >= 0.5 else 0)
 
       
     fig.tight_layout()
