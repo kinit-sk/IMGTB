@@ -90,7 +90,7 @@ def analyze_roc_curve(results_list, save_path: str, is_interactive: bool) -> Non
       name = f"{detector['name']}-{detector['config']['clf_algo_for_threshold']['name']}" if detector["type"] == "metric-based" else f"{detector['name']}"
       RocCurveDisplay.from_predictions(detector["input_data"]["test"]["label"], 
                                        y_score,
-                                       name=f"{detector['name']}-{detector['config']['clf_algo_for_threshold']['name']}", 
+                                       name=name, 
                                        ax=ax,
                                        pos_label = 1 if roc_auc_score(detector["input_data"]["test"]["label"], y_score) >= 0.5 else 0)
 
