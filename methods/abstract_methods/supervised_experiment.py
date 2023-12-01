@@ -13,20 +13,6 @@ import os
 import time
 
 
-class CustomDataset(torch.utils.data.Dataset):
-    def __init__(self, encodings, labels):
-        self.encodings = encodings
-        self.labels = labels
-
-    def __getitem__(self, idx):
-        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
-        item["labels"] = torch.tensor(self.labels[idx])
-        return item
-
-    def __len__(self):
-        return len(self.labels)
-
-
 class SupervisedExperiment(Experiment):
     def __init__(
         self,
@@ -150,6 +136,7 @@ class SupervisedExperiment(Experiment):
 
         return {
             "name": self.model,
+            'type': 'supervised',
             "input_data": self.data,
             "predictions": {"train": y_train_pred, "test": y_test_pred},
             "machine_prob": {"train": y_train_pred_prob, "test": y_test_pred_prob},
@@ -236,65 +223,6 @@ def get_supervised_model_prediction_multi_classes(
             preds.extend(torch.argmax(model(**batch_data).logits, dim=1).tolist())
     return preds
 
-
-def fine_tune_model(
-    model, tokenizer, data, config
-):
-
-    # https://huggingface.co/transformers/v3.2.0/custom_datasets.html
-    DEVICE = config["DEVICE"]
-        
-    train_text = data["train"]["text"]
-    train_label = data["train"]["label"]
-    test_text = data["test"]["text"]
-    test_label = data["test"]["label"]
-
-    if config["pos_bit"] == 0 and config["num_labels"] == 2:
-        train_label = [1 if _ == 0 else 0 for _ in train_label]
-        test_label = [1 if _ == 0 else 0 for _ in test_label]
-
-    train_encodings = tokenizer(train_text, truncation=True, padding=True)
-    test_encodings = tokenizer(test_text, truncation=True, padding=True)
-    train_dataset = CustomDataset(train_encodings, train_label)
-    test_dataset = CustomDataset(test_encodings, test_label)
-
-    model.train()
-
-    train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
-
-    no_decay = ["bias", "LayerNorm.weight"]
-    optimizer_grouped_parameters = [
-        {
-            "params": [
-                p
-                for n, p in model.named_parameters()
-                if not any(nd in n for nd in no_decay)
-            ],
-            "weight_decay": 0.01,
-        },
-        {
-            "params": [
-                p
-                for n, p in model.named_parameters()
-                if any(nd in n for nd in no_decay)
-            ],
-            "weight_decay": 0.0,
-        },
-    ]
-    optimizer = AdamW(optimizer_grouped_parameters, lr=1e-5)
-
-    for epoch in range(config["epochs"]):
-        for batch in tqdm(train_loader, desc=f"Fine-tuning: {epoch} epoch"):
-            optimizer.zero_grad()
-            input_ids = batch["input_ids"].to(DEVICE)
-            attention_mask = batch["attention_mask"].to(DEVICE)
-            labels = batch["labels"].to(DEVICE)
-            outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
-            loss = outputs[0]
-            loss.backward()
-            optimizer.step()
-    model.eval()
-    
 
 def preprocess_function(examples, **fn_kwargs):
     return fn_kwargs['tokenizer'](examples["text"], truncation=True)
