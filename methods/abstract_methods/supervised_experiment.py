@@ -1,7 +1,10 @@
 from methods.abstract_methods.experiment import Experiment
 from methods.utils import timeit, cal_metrics
+import evaluate
 import transformers
-from transformers import AdamW, TrainingArguments, Trainer, DataCollatorWithPadding
+from transformers import AdamW, TrainingArguments, Trainer, DataCollatorWithPadding, AutoTokenizer, AutoModelForSequenceClassification
+from sklearn.model_selection import train_test_split
+from datasets import Dataset
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -292,21 +295,10 @@ def fine_tune_model(
             optimizer.step()
     model.eval()
     
+
 def preprocess_function(examples, **fn_kwargs):
     return fn_kwargs['tokenizer'](examples["text"], truncation=True)
 
-
-def get_data(train_path, test_path, random_seed):
-    """
-    function to read dataframe with columns
-    """
-
-    train_df = pd.read_json(train_path, lines=True)
-    test_df = pd.read_json(test_path, lines=True)
-    
-    train_df, val_df = train_test_split(train_df, test_size=0.2, stratify=train_df['label'], random_state=random_seed)
-
-    return train_df, val_df, test_df
 
 def compute_metrics(eval_pred):
 
@@ -321,17 +313,18 @@ def compute_metrics(eval_pred):
     return results
 
 
-def fine_tune(train_df, valid_df, checkpoints_path, id2label, label2id, model):
+def fine_tune(data, model, checkpoints_path, config):
 
+    data_train, data_val = train_test_split(data, test_size=0.2, stratify=data['label'], random_state=42)
+
+    
     # pandas dataframe to huggingface Dataset
-    train_dataset = Dataset.from_pandas(train_df)
-    valid_dataset = Dataset.from_pandas(valid_df)
+    train_dataset = Dataset.from_dict(data_train)
+    valid_dataset = Dataset.from_dict(data_train)
     
     # get tokenizer and model from huggingface
     tokenizer = AutoTokenizer.from_pretrained(model)     # put your model here
-    model = AutoModelForSequenceClassification.from_pretrained(
-       model, num_labels=len(label2id), id2label=id2label, label2id=label2id    # put your model here
-    )
+    model = AutoModelForSequenceClassification.from_pretrained(model)
     
     # tokenize data for train/valid
     tokenized_train_dataset = train_dataset.map(preprocess_function, batched=True, fn_kwargs={'tokenizer': tokenizer})
@@ -344,11 +337,11 @@ def fine_tune(train_df, valid_df, checkpoints_path, id2label, label2id, model):
     # create Trainer 
     training_args = TrainingArguments(
         output_dir=checkpoints_path,
-        learning_rate=2e-5,
-        per_device_train_batch_size=16,
+        learning_rate=2e-5, #config["learning_rate"]
+        per_device_train_batch_size=16, #config["batch_size"]
         per_device_eval_batch_size=16,
-        num_train_epochs=3,
-        weight_decay=0.01,
+        num_train_epochs=3, #config["epochs"]
+        weight_decay=0.01, #config["weight_decay"]
         evaluation_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,

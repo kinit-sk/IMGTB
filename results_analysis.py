@@ -84,9 +84,10 @@ def analyze_roc_curve(results_list, save_path: str, is_interactive: bool) -> Non
     fig, ax = plt.subplots(figsize=(10, 10))
     fig.suptitle(f"{dataset_name}/ROC Analysis", fontsize=16)
     
-    for i, detector in enumerate(dataset_results.values()):
+    for detector in dataset_results.values():
       # Test if detector has criterion (metric score) and if the score is strictly one-dimensional
       y_score = detector["criterion"]["test"] if detector.get("criterion") is not None and len(detector["criterion"]["test"][0]) == 1 else detector["machine_prob"]["test"]
+      name = f"{detector['name']}-{detector['config']['clf_algo_for_threshold']['name']}" if detector["type"] == "metric-based" else f"{detector['name']}"
       RocCurveDisplay.from_predictions(detector["input_data"]["test"]["label"], 
                                        y_score,
                                        name=f"{detector['name']}-{detector['config']['clf_algo_for_threshold']['name']}", 

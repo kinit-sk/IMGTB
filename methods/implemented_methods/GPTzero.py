@@ -75,6 +75,7 @@ class GPTZero(Experiment):
 
         return {
             'name': 'GPTZero',
+            'type': 'supervised',
             'predictions': {'train': train_pred, 'test': test_pred},
             'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
             'running_time_seconds': time.time() - start_time,
