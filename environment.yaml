@@ -20,3 +20,4 @@ dependencies:
     - pyarrow==13.0.0
     - lxml==4.9.3
     - openpyxl==3.0.10
+    - evaluate==0.4.1
