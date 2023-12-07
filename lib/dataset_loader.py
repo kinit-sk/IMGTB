@@ -292,6 +292,30 @@ def process_test_small_dir(data: Dict[str, pd.DataFrame], config):
     return {"train": data_train.reset_index().to_dict(orient='list'), 
             "test": data_test.reset_index().to_dict(orient='list')}
                   
+ 
+def process_train_test_in_multiple_files(data: Dict[str, pd.DataFrame], config):
+    train = data[config["train_split"]]
+    test = data[config["test_split"]]
+    
+    if config["text_field"] not in train.columns and \
+       config["text_field"] not in test.columns or \
+       config["label_field"] not in test.columns and \
+       config["label_field"] not in test.columns:
+        raise ValueError(f"Could not parse dataset {config['filepath']}."
+                        "Text and label fields are not specified correctly."
+                        "Please, correctly specify dataset specifications or" 
+                        "define your own custom function for parsing.")
+    
+    for subset in [train, test]:
+        subset = subset.loc[:, [config["text_field"], config["label_field"]]]
+        subset.rename(columns={config["text_field"]: DEFAULT_TEXT_FIELD_NAME}, inplace=True)
+        subset[DEFAULT_LABEL_FIELD_NAME] = subset[config["label_field"]].astype(str) != config["human_label"]
+    
+    if config["test_size"] == 1:
+        return {"train": {"text": [], "label": []}, "test": test.to_dict(orient="list")}
+    
+    return {"train": train.to_dict(orient='list'), "test": test.to_dict(orient='list')}
+
     
 
 def process_TruthfulQA(data: Dict[str, pd.DataFrame], config) -> Tuple[pd.Series, pd.Series]:
