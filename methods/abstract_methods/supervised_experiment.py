@@ -11,6 +11,7 @@ from tqdm import tqdm
 import numpy as np
 import os
 import time
+import datetime
 
 
 class SupervisedExperiment(Experiment):
@@ -61,9 +62,11 @@ class SupervisedExperiment(Experiment):
 
         if self.finetune:
             fine_tune_model(
+                self.data,
                 detector,
                 tokenizer,
-                self.data,
+                self.model.replace("/", "-") + "-finetune-" + 
+                datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S'),
                 self.config
             )
 
@@ -228,31 +231,26 @@ def preprocess_function(examples, **fn_kwargs):
     return fn_kwargs['tokenizer'](examples["text"], truncation=True)
 
 
-def compute_metrics(eval_pred):
+def compute_metrics(eval_pred, metric_name="f1", average="micro"):
 
-    f1_metric = evaluate.load("f1")
+    metric = evaluate.load(metric_name)
 
     predictions, labels = eval_pred
     predictions = np.argmax(predictions, axis=1)
     
     results = {}
-    results.update(f1_metric.compute(predictions=predictions, references = labels, average="micro"))
+    results.update(metric.compute(predictions=predictions, references = labels, average=average))
 
     return results
 
 
-def fine_tune(data, model, checkpoints_path, config):
+def fine_tune_model(data, model, tokenizer, checkpoints_path, config):
 
     data_train, data_val = train_test_split(data, test_size=0.2, stratify=data['label'], random_state=42)
 
-    
     # pandas dataframe to huggingface Dataset
     train_dataset = Dataset.from_dict(data_train)
-    valid_dataset = Dataset.from_dict(data_train)
-    
-    # get tokenizer and model from huggingface
-    tokenizer = AutoTokenizer.from_pretrained(model)     # put your model here
-    model = AutoModelForSequenceClassification.from_pretrained(model)
+    valid_dataset = Dataset.from_dict(data_val)
     
     # tokenize data for train/valid
     tokenized_train_dataset = train_dataset.map(preprocess_function, batched=True, fn_kwargs={'tokenizer': tokenizer})
@@ -265,11 +263,11 @@ def fine_tune(data, model, checkpoints_path, config):
     # create Trainer 
     training_args = TrainingArguments(
         output_dir=checkpoints_path,
-        learning_rate=2e-5, #config["learning_rate"]
-        per_device_train_batch_size=16, #config["batch_size"]
-        per_device_eval_batch_size=16,
-        num_train_epochs=3, #config["epochs"]
-        weight_decay=0.01, #config["weight_decay"]
+        learning_rate=2e-5,
+        per_device_train_batch_size=config["batch_size"],
+        per_device_eval_batch_size=config["batch_size"],
+        num_train_epochs=config["epochs"],
+        weight_decay=0.01,
         evaluation_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
