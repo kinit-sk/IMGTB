@@ -21,6 +21,14 @@ def _find_interval_label(labeled_intervals, num):
     if num in interval:
       return label
 
+def _get_num_of_tokens(data: List[str]):
+  word_count = 0
+  for text_data in data:
+    spaces = text_data.count(' ')
+    tabs = text_data.count('\t')
+    newlines = text_data.count('\n')
+    word_count += spaces+tabs+newlines
+  return word_count
 
 ########################################
 #           Analysis methods           #
@@ -65,15 +73,7 @@ def analyze_test_metrics(results_list, save_path, is_interactive: bool):
     plt.savefig(os.path.join(save_path, f"{dataset_name}_metrics_analysis.png"))
     if is_interactive:
       plt.show()
-
-def _get_num_of_tokens(data: List[str]):
-  word_count = 0
-  for text_data in data:
-    spaces = text_data.count(' ')
-    tabs = text_data.count('\t')
-    newlines = text_data.count('\n')
-    word_count += spaces+tabs+newlines
-  return word_count
+      
 
 def analyze_roc_curve(results_list, save_path: str, is_interactive: bool) -> None:
   """
@@ -86,13 +86,15 @@ def analyze_roc_curve(results_list, save_path: str, is_interactive: bool) -> Non
     
     for detector in dataset_results.values():
       # Test if detector has criterion (metric score) and if the score is strictly one-dimensional
-      y_score = detector["criterion"]["test"] if detector.get("criterion") is not None and len(detector["criterion"]["test"][0]) == 1 else detector["machine_prob"]["test"]
-      name = f"{detector['name']}-{detector['config']['clf_algo_for_threshold']['name']}" if detector["type"] == "metric-based" else f"{detector['name']}"
+      is_metric_criterion_available = detector.get("criterion") is not None and len(detector["criterion"]["test"][0]) == 1
+      y_score = detector["criterion"]["test"] if is_metric_criterion_available else detector["machine_prob"]["test"]
+      name = f"{detector['name']}-{detector['config']['clf_algo_for_threshold']['name']}" if not is_metric_criterion_available and detector["type"] == "metric-based" else f"{detector['name']}"
+      pos_label = 1 if roc_auc_score(detector["input_data"]["test"]["label"], y_score) >= 0.5 else 0
       RocCurveDisplay.from_predictions(detector["input_data"]["test"]["label"], 
                                        y_score,
                                        name=name, 
                                        ax=ax,
-                                       pos_label = 1 if roc_auc_score(detector["input_data"]["test"]["label"], y_score) >= 0.5 else 0)
+                                       pos_label = pos_label)
 
       
     fig.tight_layout()
