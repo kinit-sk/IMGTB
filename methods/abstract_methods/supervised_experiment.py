@@ -12,6 +12,7 @@ import numpy as np
 import os
 import time
 import datetime
+import pandas as pd
 
 
 class SupervisedExperiment(Experiment):
@@ -245,17 +246,17 @@ def compute_metrics(eval_pred, metric_name="f1", average="micro"):
 
 
 def fine_tune_model(data, model, tokenizer, checkpoints_path, config):
-
+    data = pd.DataFrame(data)
+    data["label"] = data["label"].astype(int)
     data_train, data_val = train_test_split(data, test_size=0.2, stratify=data['label'], random_state=42)
 
     # pandas dataframe to huggingface Dataset
     train_dataset = Dataset.from_dict(data_train)
     valid_dataset = Dataset.from_dict(data_val)
-    
+
     # tokenize data for train/valid
     tokenized_train_dataset = train_dataset.map(preprocess_function, batched=True, fn_kwargs={'tokenizer': tokenizer})
     tokenized_valid_dataset = valid_dataset.map(preprocess_function, batched=True,  fn_kwargs={'tokenizer': tokenizer})
-    
 
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
