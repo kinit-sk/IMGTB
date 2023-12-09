@@ -21,3 +21,4 @@ dependencies:
     - lxml==4.9.3
     - openpyxl==3.0.10
     - evaluate==0.4.1
+    - accelerate==0.25.0
