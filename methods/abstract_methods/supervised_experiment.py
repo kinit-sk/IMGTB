@@ -62,7 +62,7 @@ class SupervisedExperiment(Experiment):
 
         if self.finetune:
             fine_tune_model(
-                self.data,
+                self.data["train"],
                 detector,
                 tokenizer,
                 self.model.replace("/", "-") + "-finetune-" + 
