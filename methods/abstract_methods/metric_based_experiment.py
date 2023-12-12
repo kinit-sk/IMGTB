@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import time
 from methods.utils import timeit, get_clf_results, load_base_model_and_tokenizer, move_model_to_device
 from methods.abstract_methods.experiment import Experiment
+import gc
 
 class MetricBasedExperiment(Experiment):
     
@@ -74,6 +75,12 @@ class MetricBasedExperiment(Experiment):
         print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
         
         end_time = time.time()
+        
+         # Clean up
+        del self.base_model
+        gc.collect()
+        torch.cuda.empty_cache()
+
         
         return {
             'name': f'{self.name}_threshold',

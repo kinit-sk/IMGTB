@@ -13,6 +13,7 @@ import os
 import time
 import datetime
 import pandas as pd
+import gc
 
 
 class SupervisedExperiment(Experiment):
@@ -134,8 +135,9 @@ class SupervisedExperiment(Experiment):
             f"{self.model} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}"
         )
 
-        # free GPU memory
+        # Clean up
         del detector
+        gc.collect()
         torch.cuda.empty_cache()
 
         return {

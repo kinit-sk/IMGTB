@@ -9,6 +9,7 @@ import time
 import os
 from tqdm import tqdm
 from methods.utils import load_base_model_and_tokenizer, move_model_to_device, get_clf_results, timeit
+import gc
 
 FILL_DICTIONARY = set()
 
@@ -21,6 +22,7 @@ class PertubationBasedExperiment(Experiment):
         self.config = config
         self.base_model = None
         self.base_tokenizer = None
+        self.mask_model = None
         self.start_time = None
      
      def get_score(self, text, perturbed_texts, base_model, base_tokenizer, DEVICE):
@@ -61,7 +63,7 @@ class PertubationBasedExperiment(Experiment):
         elif self.config["half"]:
             half_kwargs = dict(torch_dtype=torch.bfloat16)
         print(f'Loading mask filling model {mask_filling_model_name}...')
-        mask_model = transformers.AutoModelForSeq2SeqLM.from_pretrained(
+        self.mask_model = transformers.AutoModelForSeq2SeqLM.from_pretrained(
             mask_filling_model_name, **int8_kwargs, **half_kwargs, cache_dir=cache_dir)
 
         if not self.config["random_fills"]:
@@ -171,7 +173,13 @@ class PertubationBasedExperiment(Experiment):
 
             print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
             print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
-
+            
+            # Clean up
+            del self.base_model
+            del self.mask_model
+            gc.collect()
+            torch.cuda.empty_cache()
+            
             return {
                 'name': self.name,
                 'type': 'metric-based',
