@@ -314,13 +314,6 @@ def perturb_texts_(args, texts, mask_model, mask_tokenizer, base_tokenizer, ceil
         attempts = 1
         while '' in perturbed_texts:
             idxs = [idx for idx, x in enumerate(perturbed_texts) if x == '']
-            print(idxs)
-            for idx, x in enumerate(perturbed_texts):
-                if idx in idxs:
-                    print(x)
-            for idx, x in enumerate(texts):
-                if idx in idxs:
-                    print(x)
             print(
                 f'WARNING: {len(idxs)} texts have no fills. Trying again [attempt {attempts}].')
             masked_texts = [tokenize_and_mask(
