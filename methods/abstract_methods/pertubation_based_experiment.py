@@ -68,7 +68,7 @@ class PertubationBasedExperiment(Experiment):
 
         if not self.config["random_fills"]:
             try:
-                n_positions = mask_model.config.n_positions
+                n_positions = self.mask_model.config.n_positions
             except AttributeError:
                 n_positions = 512
         else:
@@ -82,7 +82,7 @@ class PertubationBasedExperiment(Experiment):
         n_perturbations = self.config["n_perturbations"]
 
         perturbation_results = self.get_perturbation_results(
-            self.config, self.data, mask_model, mask_tokenizer, self.base_model, self.base_tokenizer, self.config["span_length"], n_perturbations)
+            self.config, self.data, self.mask_model, mask_tokenizer, self.base_model, self.base_tokenizer, self.config["span_length"], n_perturbations)
 
         res = self.evaluate_perturbation_results(self.config, perturbation_results, perturbation_mode,
                                         span_length=self.config["span_length"], n_perturbations=n_perturbations)
