@@ -67,8 +67,6 @@ class SupervisedExperiment(Experiment):
                 self.data["train"],
                 detector,
                 tokenizer,
-                self.model.replace("/", "-") + "-finetune-" + 
-                datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S'),
                 self.config
             )
 
@@ -247,7 +245,7 @@ def compute_metrics(eval_pred, metric_name="f1", average="micro"):
     return results
 
 
-def fine_tune_model(data, model, tokenizer, checkpoints_path, config):
+def fine_tune_model(data, model, tokenizer, config):
     data = pd.DataFrame(data)
     data["label"] = data["label"].astype(int)
     data_train, data_val = train_test_split(data, test_size=0.2, stratify=data['label'], random_state=42)
@@ -262,6 +260,7 @@ def fine_tune_model(data, model, tokenizer, checkpoints_path, config):
 
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
+    checkpoints_path = config["checkpoints_path"] + config["name"].replace("/", "-") + "-finetuned-" + datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
 
     # create Trainer 
     training_args = TrainingArguments(

@@ -23,14 +23,17 @@ data:
 
 methods:
   global:
+    # GENERAL PARAMETERS
     cache_dir: .cache
     DEVICE: cuda
+
+    # METRIC-BASED METHODS
     clf_algo_for_threshold:
       name: LogisticRegression
-    batch_size: 16
     base_model_name: gpt2-medium
+
+    # PERTURBATION-BASED METHODS
     mask_filling_model_name: t5-large
-    model_output_machine_label: 0
     pct_words_masked: 0.3
     span_length: 2
     n_perturbation_rounds: 1
@@ -45,11 +48,18 @@ methods:
     mask_top_p: 1.0
     random_fills: false
     random_fills_tokens: false
+    
+    # GPTZero
     gptzero_key: ""
+    
+    # SUPERVISED METHODS
+    batch_size: 16
     pos_bit: 0
+    model_output_machine_label: 0
     finetune: False
     num_labels: 2
     epochs: 3
+    checkpoints_path: "./"
   list: []
 
 analysis: []
