@@ -88,8 +88,8 @@ class PertubationBasedExperiment(Experiment):
                                         span_length=self.config["span_length"], n_perturbations=n_perturbations)
         return res
     
-     def get_perturbation_results(self, args, data, mask_model, mask_tokenizer, base_model, base_tokenizer, span_length=10, n_perturbations=1):
-        load_mask_model(args, mask_model, self.DEVICE)
+     def get_perturbation_results(self, args, data, self.mask_model, mask_tokenizer, base_model, base_tokenizer, span_length=10, n_perturbations=1):
+        load_mask_model(args, self.mask_model, self.DEVICE)
 
         torch.manual_seed(0)
         np.random.seed(0)
@@ -100,14 +100,14 @@ class PertubationBasedExperiment(Experiment):
         test_label = data['test']['label']
 
         p_train_text = perturb_texts(args, [x for x in train_text for _ in range(
-            n_perturbations)], mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE=self.DEVICE)
+            n_perturbations)], self.mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE=self.DEVICE)
         p_test_text = perturb_texts(args, [x for x in test_text for _ in range(
-            n_perturbations)], mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE=self.DEVICE)
+            n_perturbations)], self.mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE=self.DEVICE)
 
         for _ in range(args["n_perturbation_rounds"] - 1):
             try:
-                p_train_text, p_test_text = perturb_texts(args, p_train_text, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE=self.DEVICE), perturb_texts(
-                    args, p_test_text, mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE=self.DEVICE)
+                p_train_text, p_test_text = perturb_texts(args, p_train_text, self.mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE=self.DEVICE), perturb_texts(
+                    args, p_test_text, self.mask_model, mask_tokenizer, base_tokenizer, ceil_pct=False, DEVICE=self.DEVICE)
             except AssertionError:
                 break
 
