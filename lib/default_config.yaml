@@ -19,6 +19,7 @@ data:
     test_split: "test"
     configuration: null
     shuffle: True
+    language_identification: False
   list: []
 
 methods:
@@ -54,7 +55,6 @@ methods:
     
     # SUPERVISED METHODS
     batch_size: 16
-    pos_bit: 0
     model_output_machine_label: 0
     finetune: False
     num_labels: 2
