@@ -275,7 +275,7 @@ def fine_tune_model(data, model, tokenizer, config):
         per_device_eval_batch_size=config["batch_size"],
         num_train_epochs=config["epochs"],
         weight_decay=0.01,
-        evaluation_strategy="epoch",
+        evaluation_strategy="no",
         save_strategy="no",
         load_best_model_at_end=True,
     )
