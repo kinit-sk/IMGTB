@@ -23,17 +23,13 @@ class SupervisedExperiment(Experiment):
         name,
         model: str,
         config,
-        pos_bit=0,
-        finetune=False,
-        num_labels=2,
-        epochs=3,
     ):
         super().__init__(data, name)
         self.model = model
         self.cache_dir = config["cache_dir"]
         self.batch_size = config["batch_size"]
         self.DEVICE = config["DEVICE"]
-        self.pos_bit = config["pos_bit"]
+        self.pos_bit = 0
         self.finetune = config["finetune"]
         self.num_labels = config["num_labels"]
         self.epochs = config["epochs"]
@@ -175,16 +171,22 @@ def set_pos_bit(model,model_output_machine_label: str, pos_bit: int) -> int:
         pos_bit: output label index to be set
     """
     if len(model.config.id2label.keys()) == 1:
+        print("0")
         return 0
     elif "machine" in model.config.label2id.keys():
+        print("1")
         return model.config.label2id["machine"]
     elif "fake" in model.config.label2id.keys():
+        print("2")
         return model.config.label2id["fake"]
     elif isinstance(model_output_machine_label, str):
+        print("3")
         return model.config.label2id[model_output_machine_label]
     elif isinstance(model_output_machine_label, int):
+        print("4")
         return model_output_machine_label
     else:
+        print("5")
         return pos_bit
 
 
@@ -229,7 +231,10 @@ def get_supervised_model_prediction_multi_classes(
 
 
 def preprocess_function(examples, **fn_kwargs):
-    return fn_kwargs['tokenizer'](examples["text"], truncation=True)
+    return fn_kwargs['tokenizer'](examples["text"], 
+                                  padding=True,
+                                  truncation=True,
+                                  max_length=512,)
 
 
 def compute_metrics(eval_pred, metric_name="f1", average="micro"):
@@ -295,4 +300,7 @@ def fine_tune_model(data, model, tokenizer, config):
     
 
     trainer.save_model(best_model_path)
+    
+    del trainer
+    gc.collect()
 
