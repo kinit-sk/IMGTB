@@ -235,7 +235,7 @@ def preprocess_function(examples, **fn_kwargs):
                                   padding=True,
                                   truncation=True,
                                   max_length=512,)
-
+    
 
 def compute_metrics(eval_pred, metric_name="f1", average="micro"):
 
@@ -276,7 +276,7 @@ def fine_tune_model(data, model, tokenizer, config):
         num_train_epochs=config["epochs"],
         weight_decay=0.01,
         evaluation_strategy="epoch",
-        save_strategy="epoch",
+        save_strategy="no",
         load_best_model_at_end=True,
     )
 
@@ -301,6 +301,8 @@ def fine_tune_model(data, model, tokenizer, config):
 
     trainer.save_model(best_model_path)
     
+    # Clear memory
     del trainer
+    torch.cuda.empty_cache()
     gc.collect()
 
