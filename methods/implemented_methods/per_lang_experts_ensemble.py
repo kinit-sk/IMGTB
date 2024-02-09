@@ -65,7 +65,7 @@ class PerLanguageExpertsEnsemble(Experiment):
 
      
      def get_predictions_for_multiple(self, data):
-         languages = [self.get_language(text, self.per_language_models) for text in tqdm(data["text"], desc="Running language identification on input data")]
+         languages = [get_language(text, self.per_language_models) for text in tqdm(data["text"], desc="Running language identification on input data")]
          data["predicted_language"] = languages
          weights = self.get_weights(languages, self.per_language_models)
          results = []
