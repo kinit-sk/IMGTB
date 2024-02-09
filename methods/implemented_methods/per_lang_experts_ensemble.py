@@ -67,12 +67,12 @@ class PerLanguageExpertsEnsemble(Experiment):
      def get_predictions_for_multiple(self, data):
          languages = [get_language(text, self.per_language_models) for text in tqdm(data["text"], desc="Running language identification on input data")]
          data["predicted_language"] = languages
-         weights = self.get_weights(languages, self.per_language_models)
+         weights = get_weights(languages, self.per_language_models)
          results = []
          for clf in self.load_models():
              pos_bit = set_pos_bit(clf["model"], self.model_output_machine_label)
              results.append(self.get_predictions_for_single(clf["name"], clf["model"], clf["tokenizer"], data["text"], pos_bit))
-             self.free_model_memory(clf)
+             free_model_memory(clf)
 
          weighted_averages = np.array(weights).dot(np.array(results))
          preds_for_each_model = {model:preds for model, preds in zip(self.per_language_models.values(), results)} 
