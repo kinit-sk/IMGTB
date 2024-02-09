@@ -313,8 +313,9 @@ def finetune_model(data, model, tokenizer, config):
         weight_decay=0.01,
         evaluation_strategy="steps",
         eval_steps=625,
-        save_strategy="epoch",
+        save_strategy="steps",
         metric_for_best_model = 'f1',
+        load_best_model_at_end=True,
         report_to="wandb"
     )
 
