@@ -112,12 +112,12 @@ def process_default(data: Dict[str, pd.DataFrame], config) -> pd.DataFrame:
     data = list(data.values())[0]    
     
     if config["text_field"] not in data.columns or config["label_field"] not in data.columns:
-        raise ValueError(f"Could not parse dataset {dataset_name}."
-                         "Text and label fields are not specified correctly."
-                         "Please, correctly specify dataset specifications or" 
+        raise ValueError(f"Could not parse dataset {dataset_name}. "
+                         "Text and label fields are not specified correctly. "
+                         "Please, correctly specify dataset specifications or " 
                          "define your own custom function for parsing.")
     
-    data = data.loc[:, [config["text_field"], config["label_field"]]]
+    #data = data.loc[:, [config["text_field"], config["label_field"]]]
     data.rename(columns={config["text_field"]: DEFAULT_TEXT_FIELD_NAME}, inplace=True)
     data[DEFAULT_LABEL_FIELD_NAME] = data[config["label_field"]].astype(str) != config["human_label"]
     
@@ -178,7 +178,8 @@ def process_huggingfacehub(data, config):
         return {"train": {"text": [], "label": []}, "test": data[config["test_split"]].to_dict()}
     
     if isinstance(data, datasets.Dataset):
-        data = data.to_pandas().loc[:, [config["text_field"], config["label_field"]]]
+        data = data.to_pandas()
+        #data = data.loc[:, [config["text_field"], config["label_field"]]]
         data[DEFAULT_LABEL_FIELD_NAME] = data[config["label_field"]].astype(str) != config["human_label"]
         data.rename(columns={config["text_field"]: DEFAULT_TEXT_FIELD_NAME}, inplace=True)
         # Try to stratify, if possible
@@ -211,7 +212,7 @@ def process_human_only(data, config):
                          "Please, correctly specify dataset specifications or" 
                          "define your own custom function for parsing.")
     
-    data = data.loc[:, [config["text_field"]]]
+    #data = data.loc[:, [config["text_field"]]]
     data[config["label_field"]] = pd.Series([HUMAN_LABEL]*data[config["text_field"]].size)
     
     if config["test_size"] == 1:
@@ -243,7 +244,7 @@ def process_machine_only(data, config):
                          "Please, correctly specify dataset specifications or" 
                          "define your own custom function for parsing.")
     
-    data = data.loc[:, [config["text_field"]]]
+    #data = data.loc[:, [config["text_field"]]]
     data[config["label_field"]] = pd.Series([MACHINE_LABEL]*data[config["text_field"]].size)
     
     if config["test_size"] == 1:
@@ -299,18 +300,17 @@ def process_train_test_in_multiple_files(data: Dict[str, pd.DataFrame], config):
     
     if config["text_field"] not in train.columns and \
        config["text_field"] not in test.columns or \
-       config["label_field"] not in test.columns and \
+       config["label_field"] not in train.columns and \
        config["label_field"] not in test.columns:
         raise ValueError(f"Could not parse dataset {config['filepath']}."
                         "Text and label fields are not specified correctly."
                         "Please, correctly specify dataset specifications or" 
                         "define your own custom function for parsing.")
-    
+
     for subset in [train, test]:
-        subset = subset.loc[:, [config["text_field"], config["label_field"]]]
+        #subset = subset.loc[:, [config["text_field"], config["label_field"]]]
         subset.rename(columns={config["text_field"]: DEFAULT_TEXT_FIELD_NAME}, inplace=True)
         subset[DEFAULT_LABEL_FIELD_NAME] = subset[config["label_field"]].astype(str) != config["human_label"]
-    
     if config["test_size"] == 1:
         return {"train": {"text": [], "label": []}, "test": test.to_dict(orient="list")}
     

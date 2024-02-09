@@ -234,7 +234,7 @@ def preprocess_function(examples, **fn_kwargs):
     return fn_kwargs['tokenizer'](examples["text"], 
                                   padding=True,
                                   truncation=True,
-                                  max_length=512,)
+                                  max_length=512)
     
 
 def compute_metrics(eval_pred, metric_name="f1", average="micro"):
@@ -298,7 +298,6 @@ def fine_tune_model(data, model, tokenizer, config):
     if not os.path.exists(best_model_path):
         os.makedirs(best_model_path)
     
-
     trainer.save_model(best_model_path)
     
     # Clear memory
