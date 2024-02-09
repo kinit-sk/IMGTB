@@ -315,7 +315,6 @@ def finetune_model(data, model, tokenizer, config):
         eval_steps=625,
         save_strategy="epoch",
         metric_for_best_model = 'f1',
-        load_best_model_at_end=True,
         report_to="wandb"
     )
 
