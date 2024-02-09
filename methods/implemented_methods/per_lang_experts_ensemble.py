@@ -106,7 +106,7 @@ class PerLanguageExpertsEnsemble(Experiment):
      def finetune(self):
          ID2LABEL = {0: "human", 1: "machine"}
          LABEL2ID = {"human": 0, "machine": 1}
-         for lang, df in split_by_language(pd.DataFrame(self.data["train"]), self.language_column).items():
+         for lang, df in split_by_language(pd.DataFrame(self.data["train"]), self.language_column, self.per_language_models).items():
     
              model_name = self.per_language_models.get(lang, self.base_model_name)
              
@@ -345,8 +345,8 @@ def finetune_model(data, model, tokenizer, config):
     gc.collect()
     torch.cuda.empty_cache()
     
-def split_by_language(df: pd.DataFrame, language_column):
+def split_by_language(df: pd.DataFrame, language_column, per_language_models):
     if not language_column in df.columns:
-        df[language_column] = [get_language(text) for text in tqdm(df["text"])]
+        df[language_column] = [get_language(text, per_language_models) for text in tqdm(df["text"])]
     # Split into subsets by 
     return {lang: subdf for lang, subdf in df.groupby(df[language_column])}
