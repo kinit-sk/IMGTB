@@ -12,7 +12,7 @@ from tqdm import tqdm
 import datetime
 
 from transformers import EarlyStoppingCallback
-from sklearn import model_selection.train_test_split
+import sklearn.model_selection
 
 import time
 import gc
