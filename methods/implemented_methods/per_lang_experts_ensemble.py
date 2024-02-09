@@ -316,7 +316,6 @@ def finetune_model(data, model, tokenizer, config):
         save_strategy="epoch",
         metric_for_best_model = 'f1',
         load_best_model_at_end=True,
-        callbacks = callbacks,
         report_to="wandb"
     )
 
@@ -328,6 +327,7 @@ def finetune_model(data, model, tokenizer, config):
         tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
+        callbacks=callbacks
     )
 
     trainer.train()
