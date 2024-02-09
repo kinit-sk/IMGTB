@@ -32,6 +32,20 @@ Arguments:
     batch_size - batch size for inference and finetuning
 
 """
+# ISO language codes
+MODEL_FILEPATHS = {
+    'en': '/mnt/michal.spiegel/models/google-electra-large-discriminator-english-finetuned-2024-01-18-19:08:18/best',
+    'zh': '/mnt/michal.spiegel/models/xlm-roberta-large-chinese-finetuned-2024-01-18-17:13:50/best',
+    'ru': '/mnt/michal.spiegel/models/xlm-roberta-large-russian-finetuned-2024-01-18-18:32:28/best',
+    'id': '/mnt/michal.spiegel/models/xlm-roberta-large-indonesian-finetuned-2024-01-18-18:07:22/best',
+    'ar' : '/mnt/michal.spiegel/models/xlm-roberta-large-arabic-finetuned-2024-01-18-16:22:42/best',
+    'bg': '/mnt/michal.spiegel/models/xlm-roberta-large-bulgarian-finetuned-2024-01-18-16:30:44/best',
+    'de': '/mnt/michal.spiegel/models/xlm-roberta-large-german-finetuned-2024-01-18-17:57:33/best',
+    'ur': '/mnt/michal.spiegel/models/xlm-roberta-large-urdu-finetuned-2024-01-23-11:04:41/best',
+    'unknown': '/mnt/michal.spiegel/models/xlm-roberta-large-finetuned-2024-01-22-08:49:59/best'
+}
+
+
 
 class PerLanguageExpertsEnsemble(Experiment):
      def __init__(self, data, config):
@@ -50,21 +64,20 @@ class PerLanguageExpertsEnsemble(Experiment):
         self.early_stopping = config.get("early_stopping", False)
 
      
-     def get_predictions_for_multiple(self, classifiers, data):
-         languages = data.get(self.language_column)
-         if languages is None:
-             languages = [self.get_language(text) for text in tqdm(data["text"])]
-         weights = get_weights(classifiers, languages)
-         
+     def get_predictions_for_multiple(self, data):
+         languages = [self.get_language(text, self.per_language_models) for text in tqdm(data["text"], desc="Running language identification on input data")]
+         data["predicted_language"] = languages
+         weights = self.get_weights(languages, self.per_language_models)
          results = []
-         for clf in classifiers:
+         for clf in self.load_models():
              pos_bit = set_pos_bit(clf["model"], self.model_output_machine_label)
              results.append(self.get_predictions_for_single(clf["name"], clf["model"], clf["tokenizer"], data["text"], pos_bit))
-        
+             self.free_model_memory(clf)
+
          weighted_averages = np.array(weights).dot(np.array(results))
          preds_for_each_model = {model:preds for model, preds in zip(self.per_language_models.values(), results)} 
          return weighted_averages[0], preds_for_each_model
-     
+
      def get_predictions_for_single(self, name, model, tokenizer, data, pos_bit):
          with torch.no_grad():
                 preds = []
@@ -79,18 +92,16 @@ class PerLanguageExpertsEnsemble(Experiment):
                         return_tensors="pt",
                     ).to(self.DEVICE)
                     preds.extend(model(**batch_data).logits.softmax(-1)[:, pos_bit].tolist())
+
          return preds
      
-    
      def load_models(self):
-         classifiers = []
          for name, filepath in self.per_language_models.items():
              model = transformers.AutoModelForSequenceClassification.from_pretrained(filepath, cache_dir=self.cache_dir)
              tokenizer = transformers.AutoTokenizer.from_pretrained(filepath, cache_dir=self.cache_dir)
              move_model_to_device(model, self.DEVICE)
-             classifiers.append({"name": name, "model": model, "tokenizer": tokenizer})
-         
-         return classifiers
+             yield {"name": name, "model": model, "tokenizer": tokenizer}
+
     
      def finetune(self):
          ID2LABEL = {0: "human", 1: "machine"}
@@ -99,7 +110,7 @@ class PerLanguageExpertsEnsemble(Experiment):
     
              model_name = self.per_language_models.get(lang, self.base_model_name)
              
-             spec_checkpoints_path = self.checkpoints_path + config["name"].replace("/", "-") + "-" + config["language"] + "-finetuned-" + datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
+             spec_checkpoints_path = self.checkpoints_path + model_name.replace("/", "-") + "-" + lang + "-finetuned-" + datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
              config = {
                  "name": model_name,
                  "checkpoints_path": spec_checkpoints_path,
@@ -150,40 +161,33 @@ class PerLanguageExpertsEnsemble(Experiment):
         torch.manual_seed(0)
         np.random.seed(0)
 
-        # Load 8 per-language models, 1 multilingual
-        classifiers = self.load_models()
-        
         train_data = self.data['train']
         train_label = self.data['train']['label']
-        y_train_pred_prob, preds_for_each_model_train  = self.get_predictions_for_multiple(classifiers, train_data)
-        y_train = train_label
+        y_train_pred_prob = np.array([])
+        y_train = []
+        y_train_pred = []
+        preds_for_each_model_train = []
+        acc_train, precision_train, recall_train, f1_train, auc_train = -1, -1, -1, -1, -1
+        if len(train_data["text"]) != 0:
+            y_train_pred_prob, preds_for_each_model_train = self.get_predictions_for_multiple(train_data)
+            y_train = train_label
+            y_train_pred = [round(_) for _ in y_train_pred_prob]
+            train_res = cal_metrics(y_train, y_train_pred, y_train_pred_prob)
+            acc_train, precision_train, recall_train, f1_train, auc_train = train_res
+            print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
 
         test_data = self.data['test']
         test_label = self.data['test']['label']
-        y_test_pred_prob, preds_for_each_model_test = self.get_predictions_for_multiple(classifiers, test_data)
+        y_test_pred_prob, preds_for_each_model_test = self.get_predictions_for_multiple(test_data)
         y_test = test_label
-        
-        y_train_pred = [round(_) for _ in y_train_pred_prob]
-        y_train = train_label
 
         y_test_pred = [round(_) for _ in y_test_pred_prob]
         y_test = test_label
 
-        train_res = cal_metrics(y_train, y_train_pred, y_train_pred_prob)
         test_res = cal_metrics(y_test, y_test_pred, y_test_pred_prob)
-        
-        acc_train, precision_train, recall_train, f1_train, auc_train = train_res
         acc_test, precision_test, recall_test, f1_test, auc_test = test_res
-
-        print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
         print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
-                
-         # Clean up
-        for clf in classifiers:
-            del clf["model"]
-            del clf["tokenizer"]
-        gc.collect()
-        torch.cuda.empty_cache()
+ 
 
         
         return {
@@ -210,6 +214,13 @@ class PerLanguageExpertsEnsemble(Experiment):
             },
             "config": self.config
         }
+
+def free_model_memory(clf):
+    del clf["model"]
+    del clf["tokenizer"]
+    torch.cuda.empty_cache()
+    gc.collect()
+
 
 
 def set_pos_bit(model,model_output_machine_label: str, pos_bit=0) -> int:
@@ -242,14 +253,17 @@ def set_pos_bit(model,model_output_machine_label: str, pos_bit=0) -> int:
         print("5")
         return pos_bit
 
-def get_language(text):
+
+def get_language(text, per_language_models):
     text = text.lower()
     res = detect(text=text.replace('\n', ' '), low_memory=False)
-    if res['score'] > 0.5: return res['lang']
+    if res['score'] > 0.5 and res["lang"] in per_language_models.keys(): return res['lang']
     return 'unknown'
 
-def get_weights(classifiers, languages):
-    return [[1 if clf["name"] == lang else 0 for clf in classifiers] for lang in languages]
+
+def get_weights(languages, per_language_models):
+    return [[1 if model_lang == lang else 0 for model_lang in per_language_models.keys()] for lang in languages]
+
 
 def preprocess_function(examples, **fn_kwargs):
     return fn_kwargs['tokenizer'](examples["text"], 
