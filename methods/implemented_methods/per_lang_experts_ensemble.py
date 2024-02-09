@@ -313,6 +313,7 @@ def finetune_model(data, model, tokenizer, config):
         weight_decay=0.01,
         evaluation_strategy="steps",
         eval_steps=625,
+        saving_steps=1250,
         save_strategy="steps",
         metric_for_best_model = 'f1',
         load_best_model_at_end=True,
