@@ -307,8 +307,8 @@ def finetune_model(data, model, tokenizer, config):
     training_args = transformers.TrainingArguments(
         output_dir=config["checkpoints_path"],
         learning_rate=2e-5,
-        per_device_train_batch_size=16,
-        per_device_eval_batch_size=16,
+        per_device_train_batch_size=8,
+        per_device_eval_batch_size=8,
         num_train_epochs=3,
         weight_decay=0.01,
         evaluation_strategy="steps",
@@ -349,5 +349,6 @@ def finetune_model(data, model, tokenizer, config):
 def split_by_language(df: pd.DataFrame, language_column, per_language_models):
     if not language_column in df.columns:
         df[language_column] = [get_language(text, per_language_models) for text in tqdm(df["text"])]
+    print("Detected following languages: " df[language_column].unique())
     # Split into subsets by 
     return {lang: subdf for lang, subdf in df.groupby(df[language_column])}
