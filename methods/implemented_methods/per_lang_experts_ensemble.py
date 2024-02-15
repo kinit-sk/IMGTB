@@ -13,6 +13,7 @@ import datetime
 
 from transformers import EarlyStoppingCallback
 import sklearn.model_selection
+from sklearn.metrics import auc, roc_curve
 
 import time
 import gc
@@ -30,22 +31,12 @@ Arguments:
     language_column - string representing the name of the column in data that labels language of example
     early_stopping - boolean
     batch_size - batch size for inference and finetuning
+    threshold_calibration - boolean
+    thresholds - Dict[str, float] - mapping languages to thresholds
 
 """
-# ISO language codes
-MODEL_FILEPATHS = {
-    'en': '/mnt/michal.spiegel/models/google-electra-large-discriminator-english-finetuned-2024-01-18-19:08:18/best',
-    'zh': '/mnt/michal.spiegel/models/xlm-roberta-large-chinese-finetuned-2024-01-18-17:13:50/best',
-    'ru': '/mnt/michal.spiegel/models/xlm-roberta-large-russian-finetuned-2024-01-18-18:32:28/best',
-    'id': '/mnt/michal.spiegel/models/xlm-roberta-large-indonesian-finetuned-2024-01-18-18:07:22/best',
-    'ar' : '/mnt/michal.spiegel/models/xlm-roberta-large-arabic-finetuned-2024-01-18-16:22:42/best',
-    'bg': '/mnt/michal.spiegel/models/xlm-roberta-large-bulgarian-finetuned-2024-01-18-16:30:44/best',
-    'de': '/mnt/michal.spiegel/models/xlm-roberta-large-german-finetuned-2024-01-18-17:57:33/best',
-    'ur': '/mnt/michal.spiegel/models/xlm-roberta-large-urdu-finetuned-2024-01-23-11:04:41/best',
-    'unknown': '/mnt/michal.spiegel/models/xlm-roberta-large-finetuned-2024-01-22-08:49:59/best'
-}
 
-
+DEFAULT_THRESHOLD = 0.5
 
 class PerLanguageExpertsEnsemble(Experiment):
      def __init__(self, data, config):
@@ -57,15 +48,17 @@ class PerLanguageExpertsEnsemble(Experiment):
         self.config = config
         self.batch_size = config["batch_size"]
         self.model_output_machine_label = config["model_output_machine_label"]
-        self.per_language_models = config.get("per_language_models")
+        self.per_language_models = config.get("per_language_models", {})
         self.do_finetune = config["finetune"]
         self.checkpoints_path = config["checkpoints_path"]
         self.language_column = config.get("language_column", "language")
         self.early_stopping = config.get("early_stopping", False)
+        self.threshold_calibration = config.get("threshold_calibration", False)
+        self.thresholds = config.get("thresholds", {})
 
      
      def get_predictions_for_multiple(self, data):
-         languages = [get_language(text, self.per_language_models) for text in tqdm(data["text"], desc="Running language identification on input data")]
+         languages = [lang if (lang:=get_language(text)) in self.per_language_models.keys() else "unknown" for text in tqdm(data["text"], desc="Running language identification on input data")]
          data["predicted_language"] = languages
          weights = get_weights(languages, self.per_language_models)
          results = []
@@ -73,10 +66,9 @@ class PerLanguageExpertsEnsemble(Experiment):
              pos_bit = set_pos_bit(clf["model"], self.model_output_machine_label)
              results.append(self.get_predictions_for_single(clf["name"], clf["model"], clf["tokenizer"], data["text"], pos_bit))
              free_model_memory(clf)
-
-         weighted_averages = np.array(weights).dot(np.array(results))
+         weighted_averages = np.multiply(np.array(weights).transpose(), np.array(results))
          preds_for_each_model = {model:preds for model, preds in zip(self.per_language_models.values(), results)} 
-         return weighted_averages[0], preds_for_each_model
+         return np.sum(weighted_averages, axis=0), preds_for_each_model
 
      def get_predictions_for_single(self, name, model, tokenizer, data, pos_bit):
          with torch.no_grad():
@@ -106,11 +98,13 @@ class PerLanguageExpertsEnsemble(Experiment):
      def finetune(self):
          ID2LABEL = {0: "human", 1: "machine"}
          LABEL2ID = {"human": 0, "machine": 1}
-         for lang, df in split_by_language(pd.DataFrame(self.data["train"]), self.language_column, self.per_language_models).items():
+         language_splits = split_by_language(pd.DataFrame(self.data["train"]), self.language_column, self.per_language_models)
+         language_splits.update({"unknown": self.data["train"]}) # Whole dataset for training of the multilingual detector for unknown languages
+         for lang, df in language_splits.items():
     
              model_name = self.per_language_models.get(lang, self.base_model_name)
              
-             spec_checkpoints_path = self.checkpoints_path + model_name.replace("/", "-") + "-" + lang + "-finetuned-" + datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
+             spec_checkpoints_path = os.path.join(self.checkpoints_path, model_name.replace("/", "-") + "-" + lang + "-finetuned-" + datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
              config = {
                  "name": model_name,
                  "checkpoints_path": spec_checkpoints_path,
@@ -143,6 +137,21 @@ class PerLanguageExpertsEnsemble(Experiment):
          gc.collect()
          torch.cuda.empty_cache()
     
+     def calibrate_thresholds(self, metrics):
+         data = pd.concat([self.data, metrics], axis="columns")
+         language_splits = split_by_language(pd.DataFrame(data), self.language_column, self.per_language_models)
+         language_splits.update({"unknown": self.data["train"]}) # Whole dataset for training of the multilingual detector for unknown languages
+         optimal_thresholds = {} 
+         for lang, df in language_splits.items():
+             fpr, tpr, thresholds = roc_curve(df["label"], df["metrics"])
+             th_optim = thresholds[np.argmax(tpr - fpr)]
+             th_optim2 = thresholds[np.argmin(np.abs(fpr+tpr-1))
+             if fpr[th_optim] < fpr[th_optim2]:
+                 optimal_thresholds[lang] = th_optim
+             else:
+                 optimal_thresholds[lang] = th_optim2
+         self.thresholds = optimal_thresholds
+    
      @timeit
      def run(self):
         start_time = time.time()
@@ -174,18 +183,22 @@ class PerLanguageExpertsEnsemble(Experiment):
             y_train_pred = [round(_) for _ in y_train_pred_prob]
             train_res = cal_metrics(y_train, y_train_pred, y_train_pred_prob)
             acc_train, precision_train, recall_train, f1_train, auc_train = train_res
-            print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
 
+        if self.threshold_calibration:
+            # for each language, get subset of samples, compute roc curve, ideal thresholds, store in thresholds
+            pass
+        
         test_data = self.data['test']
         test_label = self.data['test']['label']
         y_test_pred_prob, preds_for_each_model_test = self.get_predictions_for_multiple(test_data)
         y_test = test_label
 
-        y_test_pred = [round(_) for _ in y_test_pred_prob]
+        y_test_pred = [0 if prob < self.get_threshold(self.thresholds, self.data["train"], self.language_column, idx) else 1 for idx, prob in enumerate(y_test_pred_prob)]
         y_test = test_label
 
         test_res = cal_metrics(y_test, y_test_pred, y_test_pred_prob)
         acc_test, precision_test, recall_test, f1_test, auc_test = test_res
+        print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
         print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
  
 
@@ -214,6 +227,10 @@ class PerLanguageExpertsEnsemble(Experiment):
             },
             "config": self.config
         }
+    
+def get_threshold(thresholds, data, language_column, idx):
+    return thresholds.get(data[language_column][idx], DEFAULT_THRESHOLD)
+
 
 def free_model_memory(clf):
     del clf["model"]
@@ -254,10 +271,10 @@ def set_pos_bit(model,model_output_machine_label: str, pos_bit=0) -> int:
         return pos_bit
 
 
-def get_language(text, per_language_models):
+def get_language(text):
     text = text.lower()
     res = detect(text=text.replace('\n', ' '), low_memory=False)
-    if res['score'] > 0.5 and res["lang"] in per_language_models.keys(): return res['lang']
+    if res['score'] > 0.5 and res["lang"]: return res['lang']
     return 'unknown'
 
 
@@ -348,7 +365,7 @@ def finetune_model(data, model, tokenizer, config):
     
 def split_by_language(df: pd.DataFrame, language_column, per_language_models):
     if not language_column in df.columns:
-        df[language_column] = [get_language(text, per_language_models) for text in tqdm(df["text"])]
-    print("Detected following languages: " df[language_column].unique())
+        df[language_column] = [get_language(text) for text in tqdm(df["text"])]
+    print("Detected following languages: ", df[language_column].unique())
     # Split into subsets by 
     return {lang: subdf for lang, subdf in df.groupby(df[language_column])}
