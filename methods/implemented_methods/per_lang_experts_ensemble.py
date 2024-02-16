@@ -329,12 +329,14 @@ def finetune_model(data, model, tokenizer, config):
         num_train_epochs=3,
         weight_decay=0.01,
         evaluation_strategy="steps",
-        eval_steps=625,
-        save_steps=1250,
         save_strategy="steps",
-        metric_for_best_model = 'f1',
+        gradient_accumulation_steps=4,
+        eval_steps=300,
+        save_steps=900,
+        logging_steps=300,
+        metric_for_best_model="f1",
         load_best_model_at_end=True,
-        report_to="wandb"
+        report_to="wandb",
     )
 
     trainer = transformers.Trainer(
@@ -349,6 +351,7 @@ def finetune_model(data, model, tokenizer, config):
     )
 
     trainer.train()
+    print("Results:", trainer.evaluate())
 
     # Save best model
     best_model_path = config["checkpoints_path"] +'/best/'
