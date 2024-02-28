@@ -1,5 +1,6 @@
 from methods.abstract_methods.experiment import Experiment
 from methods.utils import timeit, cal_metrics
+
 import evaluate
 import transformers
 from transformers import AdamW, TrainingArguments, Trainer, DataCollatorWithPadding, AutoTokenizer, AutoModelForSequenceClassification
@@ -15,6 +16,44 @@ import datetime
 import pandas as pd
 import gc
 
+from peft import LoraConfig, PeftConfig, PeftModel, TaskType, AutoPeftModelForSequenceClassification, prepare_model_for_kbit_training, get_peft_model
+import torch.nn.functional as F
+import bitsandbytes as bnb
+
+"""
+Arguments:
+    model - huggingfacehub identifier or local filepath to model weights
+    cache_dir - path to directory to store cached models from huggingfacehub in
+    batch_size - batch size for inference
+    DEVICE - device to run inference/finetuning on ("cpu" or "cuda")
+    finetune - boolean
+    num_labels - size of output layer, number of output labels, 2 for binary classification
+    label2id - similar to num_labels, specifies labels/ids for model on loading
+    id2label - similar to num_labels, specifies labels/ids for model on loading
+    epochs - number of epochs for finetuning
+    model_output_machine_label - label that the model uses to indicate/label machine-generated text in output
+    finetuning_batch_size - batch size for finetuning
+    learning_rate - used in finetuning
+    training_arguments - any additional named optional parameters for huggingface transformers library TrainingArguments class
+    do_LoRA - boolean (modifies finetuning process to use LoRA PEFT technique)
+    LoRA_params - any addional named optional parameters for huggingface peft library PeftConfig class
+    quantization_config - any additional named optional parameters for huggingface transformers library BitsAndBytesConfig class
+"""
+
+F1_METRIC = evaluate.load("f1")
+
+class CustomTrainer(Trainer):
+
+    def compute_loss(self, model, inputs, return_outputs=False):
+        labels = inputs.pop("labels")
+
+        # forward pass
+        outputs = model(**inputs)
+        logits = outputs.get("logits")
+
+        # compute custom loss
+        loss = F.binary_cross_entropy_with_logits(logits[:,1], labels.to(torch.float32))#, pos_weight=self.label_weights)
+        return (loss, outputs) if return_outputs else loss
 
 class SupervisedExperiment(Experiment):
     def __init__(
@@ -34,6 +73,15 @@ class SupervisedExperiment(Experiment):
         self.num_labels = config["num_labels"]
         self.epochs = config["epochs"]
         self.model_output_machine_label = config["model_output_machine_label"]
+        self.finetuning_batch_size = config.get("finetuning_batch_size", 8)
+        self.learning_rate = config.get("learning_rate", 2e-5)
+        self.weight_decay = config.get("weight_decay", 0.01)
+        self.training_arguments = config.get("training_arguments", {})
+        self.do_lora = config.get("do_LoRA", False)
+        self.lora_params = config.get("LoRA_params", {})
+        self.quantization_config = config.get("quantization_config")
+        self.label2id = config.get("label2id", {"human": 0, "machine": 1})
+        self.id2label = config.get("id2label", {0:"human", 1:"machine"})
         self.config = config
 
     @timeit
@@ -55,8 +103,23 @@ class SupervisedExperiment(Experiment):
             ignore_mismatched_sizes=True,
         ).to(self.DEVICE)
         tokenizer = transformers.AutoTokenizer.from_pretrained(
-            self.model, cache_dir=self.cache_dir
+            self.model, 
+            cache_dir=self.cache_dir,
+            quantization_config=transformers.BitsAndBytesConfig(self.quantization_config) if self.quantization_config is not None else None
         )
+
+        #DM added
+        if tokenizer.pad_token is None:
+            if tokenizer.eos_token is not None:
+                tokenizer.pad_token = tokenizer.eos_token
+            else:
+                tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        detector.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=32)
+        try:
+            detector.config.pad_token_id = tokenizer.get_vocab()[tokenizer.pad_token]
+        except:
+            print("Warning: Exception occured while setting pad_token_id")
+        
 
         if self.finetune:
             fine_tune_model(
@@ -239,13 +302,11 @@ def preprocess_function(examples, **fn_kwargs):
 
 def compute_metrics(eval_pred, metric_name="f1", average="micro"):
 
-    metric = evaluate.load(metric_name)
-
     predictions, labels = eval_pred
     predictions = np.argmax(predictions, axis=1)
     
     results = {}
-    results.update(metric.compute(predictions=predictions, references = labels, average=average))
+    results.update(F1_METRIC.compute(predictions=predictions, references = labels, average=average))
 
     return results
 
@@ -270,17 +331,28 @@ def fine_tune_model(data, model, tokenizer, config):
     # create Trainer 
     training_args = TrainingArguments(
         output_dir=checkpoints_path,
-        learning_rate=2e-5,
-        per_device_train_batch_size=config["batch_size"],
-        per_device_eval_batch_size=config["batch_size"],
-        num_train_epochs=config["epochs"],
-        weight_decay=0.01,
+        learning_rate=config.get("learning_rate", 2e-5),
+        per_device_train_batch_size=config.get("finetuning_batch_size", 8),
+        per_device_eval_batch_size=config.get("finetuning_batch_size", 8),
+        num_train_epochs=config.get("epochs", 3),
         evaluation_strategy="no",
         save_strategy="no",
         load_best_model_at_end=True,
+        **config.get("training_arguments", {})
     )
 
-    trainer = Trainer(
+    if config.get("do_LoRA", False):
+        lora_params = config.get("lora_params", {})
+        if "target_modules" not in lora_params.keys():
+            lora_params["target_modules"] = find_all_linear_names(model)
+        peft_config = LoraConfig(
+            task_type=TaskType.SEQ_CLS,
+            **lora_params
+            )
+        model = prepare_model_for_kbit_training(model)
+        model = get_peft_model(model, peft_config)
+
+    trainer = CustomTrainer(
         model=model,
         args=training_args,
         train_dataset=tokenized_train_dataset,
@@ -289,6 +361,11 @@ def fine_tune_model(data, model, tokenizer, config):
         data_collator=data_collator,
         compute_metrics=compute_metrics,
     )
+
+    if config.get("do_LoRA", False):
+        for name, module in trainer.model.named_modules():
+            if "norm" in name:
+                module = module.to(torch.float32)
 
     trainer.train()
 
@@ -299,9 +376,33 @@ def fine_tune_model(data, model, tokenizer, config):
         os.makedirs(best_model_path)
     
     trainer.save_model(best_model_path)
+    trainer.model.save_pretrained(best_model_path)
+    tokenizer.save_pretrained(best_model_path)
+    torch.save(trainer.model.score.state_dict(), f'{best_model_path}/score-params.pt')
     
+    print('Merging model...')
+    model_temp = transformers.AutoPeftModelForSequenceClassification.from_pretrained(
+        best_model_path,
+        low_cpu_mem_usage=True,
+        torch_dtype=torch.float16,
+    )
+    model_temp = model_temp.merge_and_unload()        
+    model_temp.save_pretrained(
+       best_model_path, safe_serialization=True, max_shard_size="2GB"
+    )
+
     # Clear memory
     del trainer
     torch.cuda.empty_cache()
     gc.collect()
 
+def find_all_linear_names(model):
+    lora_module_names = set()
+    for name, module in model.named_modules():
+        if isinstance(module, bnb.nn.Linear4bit):
+            names = name.split(".")
+            lora_module_names.add(names[0] if len(names) == 1 else names[-1])
+
+    if "lm_head" in lora_module_names:  # needed for 16-bit
+        lora_module_names.remove("lm_head")
+    return list(lora_module_names)
