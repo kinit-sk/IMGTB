@@ -238,3 +238,22 @@ def get_llm_deviation(text, model, tokenizer, DEVICE):
         ranks = torch.square(ranks)
 
         return ranks.float().mean().item()
+
+def get_s5(text, model, tokenizer, DEVICE):
+    with torch.no_grad():
+        tokenized = tokenizer(
+            text, padding=True, truncation=True, max_length=512, return_tensors="pt").to(DEVICE)
+        labels = tokenized.input_ids
+        outputs = model(**tokenized, labels=labels)
+        logits = outputs.logits[:, :-1]
+
+        neg_entropy = F.softmax(logits, dim=-1) * F.log_softmax(logits, dim=-1)
+
+        labels = tokenized.input_ids[:, 1:]
+        matches = (logits.argsort(-1, descending=True) == labels.unsqueeze(-1)).nonzero()
+        assert matches.shape[1] == 3, f"Expected 3 dimensions in matches tensor, got {matches.shape}"
+        ranks, timesteps = matches[:, -1], matches[:, -2]
+        assert (timesteps == torch.arange(len(timesteps)).to(timesteps.device)).all(), "Expected one match per timestep"
+        ranks = ranks.float() + 1  # convert to 1-indexed rank
+
+        return [-outputs.loss.item(), -neg_entropy.sum(-1).mean().item(), ranks.float().mean().item(), torch.log(ranks).float().mean().item(), torch.square(torch.log(ranks)).float().mean().item()]
