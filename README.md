@@ -4,6 +4,19 @@ A machine-generated text benchmarking framework  based upon the original [MGTBen
 
 The framework also includes a couple of analysis tools for automatic analysis of the benchmark results.
 
+## Cite
+If you use the data, code, or the information in this repository, cite the following paper, please.
+```bibtex
+@misc{spiegel2023imgtb,
+      title={{IMGTB}: A Framework for Machine-Generated Text Detection Benchmarking}, 
+      author={Michal Spiegel and Dominik Macko},
+      year={2023},
+      eprint={2311.12574},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL}
+}
+```
+
 ## **Supported Methods**
 Currently, we support the following methods. To add a new method you can see the documentation below:
 - Metric-based methods:
