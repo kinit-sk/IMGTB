@@ -87,6 +87,7 @@ class Binoculars(object):
                  observer_name_or_path: str = "tiiuae/falcon-7b",
                  performer_name_or_path: str = "tiiuae/falcon-7b-instruct",
                  use_bfloat16: bool = True,
+                 use_int4: bool = False,
                  max_token_observed: int = 512,
                  ) -> None:
         if observer_name_or_path != performer_name_or_path:
@@ -97,6 +98,7 @@ class Binoculars(object):
                                                                    trust_remote_code=True,
                                                                    torch_dtype=torch.bfloat16 if use_bfloat16
                                                                    else torch.float32,
+                                                                   load_in_4bit=use_int4,
                                                                    token=huggingface_config["TOKEN"]
                                                                    )
         if observer_name_or_path == performer_name_or_path:
@@ -109,6 +111,7 @@ class Binoculars(object):
                                                                     trust_remote_code=True,
                                                                     torch_dtype=torch.bfloat16 if use_bfloat16
                                                                     else torch.float32,
+                                                                    load_in_4bit=use_int4,
                                                                     token=huggingface_config["TOKEN"]
                                                                     )
 
@@ -166,7 +169,8 @@ class BinocularsMetric(MetricBasedExperiment):
         self.config['flipprobs'] = True #higher values to represent the machine class
         self.config['observer'] = "tiiuae/falcon-7b"
         self.config['performer'] = "tiiuae/falcon-7b-instruct"
-        self.bino = Binoculars(observer_name_or_path=self.config['observer'], performer_name_or_path=self.config['performer'])
+        self.config['int4'] = False
+        self.bino = Binoculars(observer_name_or_path=self.config['observer'], performer_name_or_path=self.config['performer'], use_int4=self.config['int4'])
         
     def criterion_fn(self, text: str):
         results = [self.bino.predict(text)]
