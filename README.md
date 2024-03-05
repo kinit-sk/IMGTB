@@ -52,6 +52,14 @@ cd IMGTB
 conda env create -f environment.yaml
 conda activate IMGTB
 ```
+or
+```bash
+git clone https://github.com/michalspiegel/IMGTB.git
+cd IMGTB
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
 ## **Usage**
 ```python
