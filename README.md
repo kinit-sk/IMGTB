@@ -17,6 +17,8 @@ Currently, we support the following methods. To add a new method you can see the
     - [DetectLLM-NPR](https://arxiv.org/abs/2306.05540)
     - [Multi-Feature Detection](https://www.researchsquare.com/article/rs-3226684/v1)
     - [LLM Deviation](https://www.researchsquare.com/article/rs-3226684/v1)
+    - [Binoculars](https://arxiv.org/abs/2401.12070)
+    - [S5](https://arxiv.org/abs/2402.13671)
 - Model-based methods:
     - [RoBERTa Base OpenAI Detector](https://huggingface.co/roberta-base-openai-detector)
     - [RoBERTa Large OpenAI Detector](https://huggingface.co/roberta-large-openai-detector)
