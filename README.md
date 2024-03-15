@@ -33,6 +33,7 @@ Currently, we support the following methods. To add a new method you can see the
     - [Binoculars](https://arxiv.org/abs/2401.12070)
     - [S5](https://arxiv.org/abs/2402.13671)
 - Model-based methods:
+    - [PerLanguageMixtureOfExperts](https://arxiv.org/abs/2402.13671)
     - [RoBERTa Base OpenAI Detector](https://huggingface.co/roberta-base-openai-detector)
     - [RoBERTa Large OpenAI Detector](https://huggingface.co/roberta-large-openai-detector)
     - [ChatGPT-detector-RoBERTa](https://huggingface.co/Hello-SimpleAI/chatgpt-detector-roberta)
