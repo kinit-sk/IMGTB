@@ -48,14 +48,14 @@ Currently, we support the following methods. To add a new method you can see the
 ## **Installation**
 
 ```bash
-git clone https://github.com/michalspiegel/IMGTB.git
+git clone https://github.com/kinit-sk/IMGTB.git
 cd IMGTB
 conda env create -f environment.yaml
 conda activate IMGTB
 ```
 or
 ```bash
-git clone https://github.com/michalspiegel/IMGTB.git
+git clone https://github.com/kinit-sk/IMGTB.git
 cd IMGTB
 python -m venv .venv
 source .venv/bin/activate
