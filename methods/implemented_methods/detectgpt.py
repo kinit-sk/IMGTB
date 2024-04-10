@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import random
 import time
 from tqdm import tqdm
-from methods.utils import get_clf_results, get_ll
+from methods.utils import get_ll
 
 class DetectGPT(PertubationBasedExperiment):
     

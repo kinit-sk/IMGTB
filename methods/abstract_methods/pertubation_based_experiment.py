@@ -1,4 +1,4 @@
-from methods.abstract_methods.experiment import Experiment
+from methods.abstract_methods.metric_based_experiment import MetricBasedExperiment
 import numpy as np
 import transformers
 import re
@@ -8,12 +8,12 @@ import random
 import time
 import os
 from tqdm import tqdm
-from methods.utils import load_base_model_and_tokenizer, move_model_to_device, get_clf_results, timeit
+from methods.utils import move_model_to_device, timeit
 import gc
 
 FILL_DICTIONARY = set()
 
-class PertubationBasedExperiment(Experiment):
+class PertubationBasedExperiment(MetricBasedExperiment):
      def __init__(self, data, name, config): # Add extra parameters if needed
         super().__init__(data, name)
         self.base_model_name = config["base_model_name"]
@@ -40,7 +40,7 @@ class PertubationBasedExperiment(Experiment):
             self.DEVICE = "cpu"
         
         print(f"Loading BASE model {self.base_model_name}\n")
-        self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
+        self.base_model, self.base_tokenizer = self.load_base_model_and_tokenizer(
             self.base_model_name, self.cache_dir)
         move_model_to_device(self.base_model, self.DEVICE) 
         
@@ -167,7 +167,7 @@ class PertubationBasedExperiment(Experiment):
             #x_test = np.expand_dims(x_test, axis=-1)
             y_test = [_['label'] for _ in results['test']]
 
-            train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test, config=self.config)
+            train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = self.get_clf_results(x_train, y_train, x_test, y_test, config=self.config)
             acc_train, precision_train, recall_train, f1_train, auc_train = train_res
             acc_test, precision_test, recall_test, f1_test, auc_test = test_res
 

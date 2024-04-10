@@ -15,8 +15,8 @@ data:
     human_label: "0"
     dataset_other: null
     test_size: 0.3
-    train_split: "train"
-    test_split: "test"
+    train_split: null
+    test_split: null
     configuration: null
     shuffle: True
     language_identification: False
@@ -29,8 +29,7 @@ methods:
     DEVICE: cuda
 
     # METRIC-BASED METHODS
-    clf_algo_for_threshold:
-      name: LogisticRegression
+    clf_algo_for_threshold: null
     base_model_name: gpt2-medium
 
     # PERTURBATION-BASED METHODS

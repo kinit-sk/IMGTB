@@ -1,20 +1,23 @@
-from methods.abstract_methods.metric_based_experiment import MetricBasedExperiment
-from methods.utils import timeit, get_clf_results, load_base_model_and_tokenizer, move_model_to_device
-import torch
-import numpy as np
 import os
 import time
 
+import torch
+import numpy as np
+
+
+from methods.abstract_methods.metric_based_experiment import MetricBasedExperiment
 
 class GLTRMetric(MetricBasedExperiment):
     def __init__(self, data, config):
         super().__init__(data, self.__class__.__name__, config)
         self.base_model_name = config["base_model_name"]
         self.config = config
+        if self.threshold_estimation_params.get("name") == "AUCThresholdCalibrator" or self.threshold_estimation_params.get("name") == "AUCThresholdCalibrator" == "ManualThresholdSelectionClassifier":
+            raise ValueError("GLTRMetric is not compatible with threshold estimation using AUCThresholdCalibrator or ManualThresholdSelectionClassifier. Please, manually specify a different classfier capable of classifying multi-dimensional sample data points.")
     
     def criterion_fn(self, text: str):
         with torch.no_grad():
-            tokenized = self.base_tokenizer(text, return_tensors="pt").to(self.DEVICE)
+            tokenized = self.base_tokenizer(text, padding=True, truncation=True, max_length=512, return_tensors="pt").to(self.DEVICE)
             logits = self.base_model(**tokenized).logits[:, :-1]
             labels = tokenized.input_ids[:, 1:]
 
@@ -45,69 +48,3 @@ class GLTRMetric(MetricBasedExperiment):
                 res = res / res.sum()
 
             return res
-    
-    @timeit
-    def run(self):
-        start_time = time.time()
-        
-        if not os.path.exists(self.cache_dir):
-            os.makedirs(self.cache_dir)
-            print(f"Using cache dir {self.cache_dir}")
-        if "cuda" in self.DEVICE and not torch.cuda.is_available():
-            print(f'Setting default device to cpu. Cuda is not available.')
-            self.DEVICE = "cpu"
-        
-        print(f"Loading BASE model {self.base_model_name}\n")
-        self.base_model, self.base_tokenizer = load_base_model_and_tokenizer(
-            self.base_model_name, self.cache_dir)
-        move_model_to_device(self.base_model, self.DEVICE)
-        
-        torch.manual_seed(0)
-        np.random.seed(0)
-
-        train_text = self.data['train']['text']
-        train_label = self.data['train']['label']
-        train_criterion = [self.criterion_fn(train_text[idx])
-                        for idx in range(len(train_text))]
-        x_train = np.array(train_criterion)
-        y_train = train_label
-
-        test_text = self.data['test']['text']
-        test_label = self.data['test']['label']
-        test_criterion = [self.criterion_fn(test_text[idx])
-                        for idx in range(len(test_text))]
-        x_test = np.array(test_criterion)
-        y_test = test_label
-        
-        train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = get_clf_results(x_train, y_train, x_test, y_test, self.config)
-
-        acc_train, precision_train, recall_train, f1_train, auc_train = train_res
-        acc_test, precision_test, recall_test, f1_test, auc_test = test_res
-
-        print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
-        print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
-
-        return {
-            'name': f'{self.name}_threshold',
-            'type': 'metric-based',
-            'input_data': self.data,
-            'predictions': {'train': train_pred.tolist(), 'test': test_pred.tolist()},
-            'machine_prob': {'train': train_pred_prob, 'test': test_pred_prob},
-            'criterion': {'train': [elem.tolist() for elem in train_criterion], 'test': [elem.tolist() for elem in test_criterion]},
-            'running_time_seconds': time.time() - start_time,
-            'metrics_results': {
-                'train': {
-                    'acc': acc_train,
-                    'precision': precision_train,
-                    'recall': recall_train,
-                    'f1': f1_train
-                },
-                'test': {
-                    'acc': acc_test,
-                    'precision': precision_test,
-                    'recall': recall_test,
-                    'f1': f1_test
-                }
-            },
-            "config": self.config
-        }

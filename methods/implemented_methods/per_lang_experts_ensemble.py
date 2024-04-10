@@ -148,14 +148,12 @@ class PerLanguageExpertsEnsemble(Experiment):
          language_splits = split_by_language(pd.DataFrame(data), self.language_column, self.per_language_models)
          language_splits["unknown"] = data # Whole dataset for training of the multilingual detector for unknown languages
          optimal_thresholds = {}
-         print(data)
          for lang, df in language_splits.items():
              if lang not in self.per_language_models.keys():
                  continue
              fpr, tpr, thresholds = roc_curve(df["label"], df["language-pred-prob-"+lang])
              th_optim_idx = np.argmax(tpr - fpr)
              th_optim2_idx = np.argmin(np.abs(fpr+tpr-1))
-             print("TPR1", tpr[th_optim_idx], "TPR2", tpr[th_optim_idx], "FPR1", fpr[th_optim2_idx],  "FPR2", fpr[th_optim2_idx])
              if fpr[th_optim_idx] < fpr[th_optim2_idx]:
                  optimal_thresholds[lang] = thresholds[th_optim_idx]
              else:

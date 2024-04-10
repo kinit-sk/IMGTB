@@ -4,7 +4,7 @@ import transformers
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
-from methods.utils import get_clf_results, get_rank
+from methods.utils import get_rank
 
 class DetectLLM_NPR(PertubationBasedExperiment):
     
