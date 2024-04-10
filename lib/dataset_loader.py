@@ -94,7 +94,7 @@ def read_file_to_pandas(filepath: str, config, is_interactive: bool, filetype="a
         case "xml":
             data[Path(filepath).stem] = pd.read_xml(filepath, encoding='utf-8')
         case "huggingfacehub":
-            data[Path(filepath).stem] = datasets.load_dataset(filepath, config["configuration"],  encoding='utf-8')
+            data[Path(filepath).stem] = datasets.load_dataset(filepath, config["configuration"])
         case _:
             return None
 
