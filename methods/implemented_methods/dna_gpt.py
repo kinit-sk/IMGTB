@@ -260,8 +260,7 @@ class DNAGPT(MetricBasedExperiment):
         tokens = self.tokenizer(prompt, truncation=True, return_tensors="pt").to(self.DEVICE)
         
         if max_new_tokens == 0:
-            labels = tokens.input_ids
-            scores = self.model(**tokens, labels=labels).logits
+            scores = self.model(**tokens).logits[:, :-1]
             seq_logprob = 0
             for idx, token_id in enumerate(tokens.input_ids[0]):
                 seq_logprob += scores[0][idx][token_id]
