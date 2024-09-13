@@ -3,11 +3,9 @@ from methods.utils import timeit, cal_metrics
 
 import evaluate
 import transformers
-from transformers import AdamW, TrainingArguments, Trainer, DataCollatorWithPadding, AutoTokenizer, AutoModelForSequenceClassification
 from sklearn.model_selection import train_test_split
 from datasets import Dataset
 import torch
-from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 import os
@@ -16,7 +14,7 @@ import datetime
 import pandas as pd
 import gc
 
-from peft import LoraConfig, PeftConfig, PeftModel, TaskType, AutoPeftModelForSequenceClassification, prepare_model_for_kbit_training, get_peft_model
+from peft import LoraConfig, TaskType, prepare_model_for_kbit_training, get_peft_model
 import torch.nn.functional as F
 import bitsandbytes as bnb
 
@@ -42,7 +40,7 @@ Arguments:
 
 F1_METRIC = evaluate.load("f1")
 
-class CustomTrainer(Trainer):
+class CustomTrainer(transformers.Trainer):
 
     def compute_loss(self, model, inputs, return_outputs=False):
         labels = inputs.pop("labels")
@@ -324,12 +322,12 @@ def fine_tune_model(data, model, tokenizer, config):
     tokenized_train_dataset = train_dataset.map(preprocess_function, batched=True, fn_kwargs={'tokenizer': tokenizer})
     tokenized_valid_dataset = valid_dataset.map(preprocess_function, batched=True,  fn_kwargs={'tokenizer': tokenizer})
 
-    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+    data_collator = transformers.DataCollatorWithPadding(tokenizer=tokenizer)
 
     checkpoints_path = config["checkpoints_path"] + config["name"].replace("/", "-") + "-finetuned-" + datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
 
     # create Trainer 
-    training_args = TrainingArguments(
+    training_args = transformers.TrainingArguments(
         output_dir=checkpoints_path,
         learning_rate=config.get("learning_rate", 2e-5),
         per_device_train_batch_size=config.get("finetuning_batch_size", 8),
@@ -357,6 +355,7 @@ def fine_tune_model(data, model, tokenizer, config):
         tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
+        endpoints="wandb"
     )
 
     if config.get("do_LoRA", False):

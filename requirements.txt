@@ -16,7 +16,11 @@ openpyxl
 evaluate
 accelerate
 sentencepiece
-fasttext=0.9.1
+fasttext==0.9.1
 fasttext-langdetect
 peft
 bitsandbytes
+openai
+spacy
+nltk
+rouge_score

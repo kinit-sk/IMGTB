@@ -7,6 +7,7 @@ from typing import List, Dict, Union, Tuple
 from pathlib import Path
 from itertools import zip_longest
 from sklearn.model_selection import train_test_split
+from math import floor
 
 """ 
     This module provides functionality for loading datasets
@@ -321,12 +322,13 @@ def process_train_test_in_multiple_files(data: Dict[str, pd.DataFrame], config):
 def process_TruthfulQA(data: Dict[str, pd.DataFrame], config) -> Tuple[pd.Series, pd.Series]:
     data = list(data.values())[0]
     detectLLM = config["dataset_other"]
-    
-    a_human = data['Best Answer'].fillna("").where(1 < data['Best Answer'].str.split().apply(len)).astype(str)
-    a_chat = data[f'{detectLLM}_answer'].fillna("").where(1 < data[f'{detectLLM}_answer'].str.split().apply(len)).astype(str)
+    num_samples = config.get("num_samples", -1)
 
-    df_human_labeled = pd.concat([a_human, pd.Series([0]*a_human.size)], axis="columns", ignore_index=True, names=["text", "label"])
-    df_chat_labeled = pd.concat([a_chat, pd.Series([1]*a_chat.size)], axis="columns", ignore_index=True, names=["text", "label"])
+    a_human = data['Best Answer'].fillna("").where(1 < data['Best Answer'].fillna("").str.split().apply(len)).astype(str)
+    a_chat = data[f'{detectLLM}_answer'].fillna("").where(1 < data[f'{detectLLM}_answer'].fillna("").str.split().apply(len)).astype(str)
+
+    df_human_labeled = pd.concat([a_human, pd.Series([0]*a_human.size)], axis="columns", ignore_index=True, names=["text", "label"]).head(floor(num_samples/2))
+    df_chat_labeled = pd.concat([a_chat, pd.Series([1]*a_chat.size)], axis="columns", ignore_index=True, names=["text", "label"]).head(floor(num_samples/2))
     
     data = pd.concat([df_human_labeled, df_chat_labeled], ignore_index=True)
     data.columns = ["text", "label"]
