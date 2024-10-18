@@ -24,3 +24,4 @@ openai
 spacy
 nltk
 rouge_score
+tf-keras
