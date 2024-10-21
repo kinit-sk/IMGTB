@@ -2,6 +2,7 @@ import transformers
 import re
 import sys
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
+from imblearn.metrics import specificity_score
 import time
 from functools import wraps
 import random
@@ -90,27 +91,37 @@ def move_tensor_to_device(tensor, DEVICE):
 
 def cal_metrics(label, pred_label, pred_posteriors):
     if len(set(label)) < 2:
+        average_type =  'weighted'
         acc = accuracy_score(label, pred_label)
-        precision = precision_score(label, pred_label, average="weighted")
-        recall = recall_score(label, pred_label, average="weighted")
-        f1 = f1_score(label, pred_label, average="weighted")
+        precision = precision_score(label, pred_label, average=average_type)
+        recall = recall_score(label, pred_label, average=average_type)
+        f1 = f1_score(label, pred_label, average=average_type)
+        spcificity = specificity_score(label, pred_label, average=average_type)
         print("Cannot evaluate AUC metric on data with less than 2 labels. Setting AUC to -1...")
+        print("There is only one label in y_true. Make sure to interpret precision, recall, and F1 scores accordingly.")
+        print("Unique label in y_true: ", set(label))
         auc = -1.0
     elif len(set(label)) == 2:
+        average_type =  'binary' # the value in the original code was 'weighted'
         acc = accuracy_score(label, pred_label)
-        precision = precision_score(label, pred_label, average="weighted")
-        recall = recall_score(label, pred_label, average="weighted")
-        f1 = f1_score(label, pred_label, average="weighted")
+        precision = precision_score(label, pred_label, average=average_type)
+        recall = recall_score(label, pred_label, average=average_type)
+        f1 = f1_score(label, pred_label, average=average_type)
+        spcificity = specificity_score(label, pred_label, average=average_type)
         auc = roc_auc_score(label, pred_posteriors)
+        print("Unique label in y_true: ", set(label))
     else:
+        average_type =  'weighted'
         acc = accuracy_score(label, pred_label)
-        precision = precision_score(label, pred_label, average='weighted')
-        recall = recall_score(label, pred_label, average='weighted')
-        f1 = f1_score(label, pred_label, average='weighted')
+        precision = precision_score(label, pred_label, average=average_type)
+        recall = recall_score(label, pred_label, average=average_type)
+        f1 = f1_score(label, pred_label, average=average_type)
+        spcificity = specificity_score(label, pred_label, average=average_type)
         print("Cannot evaluate AUC metric on data with more than 2 labels. Setting AUC to -1...")
+        print("Unique label in y_true: ", set(label))
         auc = -1.0
 
-    return acc, precision, recall, f1, auc
+    return acc, precision, recall, f1, auc, spcificity
 
 
 def get_ll(text, base_model, base_tokenizer, DEVICE):

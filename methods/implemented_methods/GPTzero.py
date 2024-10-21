@@ -63,15 +63,15 @@ class GPTZero(Experiment):
         train_pred = [round(_) for _ in train_pred_prob]
         test_pred = [round(_) for _ in test_pred_prob]
 
-        acc_train, precision_train, recall_train, f1_train, auc_train = cal_metrics(
+        acc_train, precision_train, recall_train, f1_train, auc_train, specificity_train = cal_metrics(
             train_label, train_pred, train_pred_prob)
-        acc_test, precision_test, recall_test, f1_test, auc_test = cal_metrics(
+        acc_test, precision_test, recall_test, f1_test, auc_test, specificity_test = cal_metrics(
             test_label, test_pred, test_pred_prob)
 
         print(
-            f"GPTZero acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
+            f"GPTZero acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}, specificity_train: {specificity_train}")
         print(
-            f"GPTZero acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
+            f"GPTZero acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}, specificity_test: {specificity_test}")
 
         return {
             'name': 'GPTZero',
@@ -84,13 +84,15 @@ class GPTZero(Experiment):
                     'acc': acc_train,
                     'precision': precision_train,
                     'recall': recall_train,
-                    'f1': f1_train
+                    'f1': f1_train,
+                    'specificity': specificity_train
                 },
                 'test': {
                     'acc': acc_test,
                     'precision': precision_test,
                     'recall': recall_test,
-                    'f1': f1_test
+                    'f1': f1_test,
+                    'specificity': specificity_test
                 }
             },
             "config": self.config

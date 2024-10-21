@@ -32,4 +32,5 @@ dependencies:
     - nltk
     - rouge_score
     - tf-keras
+    - imbalanced-learn
 
