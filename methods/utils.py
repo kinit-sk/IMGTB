@@ -96,7 +96,7 @@ def cal_metrics(label, pred_label, pred_posteriors):
         precision = precision_score(label, pred_label, average=average_type)
         recall = recall_score(label, pred_label, average=average_type)
         f1 = f1_score(label, pred_label, average=average_type)
-        spcificity = specificity_score(label, pred_label, average=average_type)
+        specificity = specificity_score(label, pred_label, average=average_type)
         print("Cannot evaluate AUC metric on data with less than 2 labels. Setting AUC to -1...")
         print("There is only one label in y_true. Make sure to interpret precision, recall, and F1 scores accordingly.")
         print("Unique label in y_true: ", set(label))
@@ -107,7 +107,7 @@ def cal_metrics(label, pred_label, pred_posteriors):
         precision = precision_score(label, pred_label, average=average_type)
         recall = recall_score(label, pred_label, average=average_type)
         f1 = f1_score(label, pred_label, average=average_type)
-        spcificity = specificity_score(label, pred_label, average=average_type)
+        specificity = specificity_score(label, pred_label, average=average_type)
         auc = roc_auc_score(label, pred_posteriors)
         print("Unique label in y_true: ", set(label))
     else:
@@ -116,12 +116,12 @@ def cal_metrics(label, pred_label, pred_posteriors):
         precision = precision_score(label, pred_label, average=average_type)
         recall = recall_score(label, pred_label, average=average_type)
         f1 = f1_score(label, pred_label, average=average_type)
-        spcificity = specificity_score(label, pred_label, average=average_type)
+        specificity = specificity_score(label, pred_label, average=average_type)
         print("Cannot evaluate AUC metric on data with more than 2 labels. Setting AUC to -1...")
         print("Unique label in y_true: ", set(label))
         auc = -1.0
 
-    return acc, precision, recall, f1, auc, spcificity
+    return acc, precision, recall, f1, auc, specificity
 
 
 def get_ll(text, base_model, base_tokenizer, DEVICE):
