@@ -290,7 +290,7 @@ def analyze_false_positives(results_list, save_path, is_interactive: bool):
       pred_data = pd.DataFrame({
         "pred_prob": detector["machine_prob"]["test"], 
         "true_label": detector["input_data"]["test"]["label"]})
-      pred_data_positive = pred_data[pred_data["true_label"] == 0]
+      pred_data_positive = pred_data[pred_data["true_label"] == 0].copy()
       pred_data_positive["confusion_label"] = pred_data_positive.apply(lambda row: _find_interval_label(PRED_PROB_INTERVALS, row["pred_prob"]), axis="columns")
       
       counts = dict(Counter(list(pred_data_positive["confusion_label"])))
@@ -349,7 +349,7 @@ def analyze_false_negatives(results_list, save_path, is_interactive: bool):
       pred_data = pd.DataFrame({
         "pred_prob": detector["machine_prob"]["test"], 
         "true_label": detector["input_data"]["test"]["label"]})
-      pred_data_positive = pred_data[pred_data["true_label"] == 1]
+      pred_data_positive = pred_data[pred_data["true_label"] == 1].copy()
       pred_data_positive["confusion_label"] = pred_data_positive.apply(lambda row: _find_interval_label(PRED_PROB_INTERVALS, row["pred_prob"]), axis="columns")
       
       counts = dict(Counter(list(pred_data_positive["confusion_label"])))
