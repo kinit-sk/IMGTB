@@ -147,6 +147,16 @@ def scan_for_detection_methods():
 
     return exp_class_list
 
+# Convert the outputs to a JSON-serializable format
+def convert_to_serializable(obj):
+    import numpy as np
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, dict):
+        return {k: convert_to_serializable(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [convert_to_serializable(i) for i in obj]
+    return obj
 
 def log_whole_experiment(config, outputs):
     """Log all experiment data as a whole by current time"""
@@ -160,6 +170,7 @@ def log_whole_experiment(config, outputs):
         json.dump(config, file, indent=4)
         
     # Save outputs.
+    outputs = convert_to_serializable(outputs)
     with open(os.path.join(LOG_PATH, "benchmark_results.json"), "w") as file:
         json.dump(outputs, file)
 
@@ -185,6 +196,7 @@ def save_method_dataset_combination_results(methods_config, outputs):
                 os.makedirs(SAVE_PATH)
             data = {"config": method_config, "data": method_results}
             # Save args and outputs for given method and dataset.
+            data = convert_to_serializable(outputs)
             with open(os.path.join(SAVE_PATH, f"{CURR_DATETIME}_experiment_results.json"), "w") as file:
                 json.dump(data, file)
 
