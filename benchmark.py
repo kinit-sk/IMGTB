@@ -104,9 +104,9 @@ def run_all_available(data, method_config, available_experiments):
             experiment_instance = experiment(data=data, config=method_config)
             results[experiment_instance.name] = (experiment_instance.run())
         except Exception:
-            print(f"Experiment {method_config['name']} failed. Skipping and continuing with the next experiment.")
+            print(f"Experiment {experiment.__name__ if isinstance(experiment, type) else experiment.__class__.__name__} failed. Skipping and continuing with the next experiment.")
             # Print detailed error message to stderr
-            print(f"Experiment {method_config['name']} failed due to below reasons:", file=sys.stderr)
+            print(f"Experiment {experiment.__name__ if isinstance(experiment, type) else experiment.__class__.__name__} failed due to below reasons:", file=sys.stderr)
             print(traceback.format_exc(), file=sys.stderr)
             continue
     return results
