@@ -196,7 +196,7 @@ def save_method_dataset_combination_results(methods_config, outputs):
                 os.makedirs(SAVE_PATH)
             data = {"config": method_config, "data": method_results}
             # Save args and outputs for given method and dataset.
-            data = convert_to_serializable(outputs)
+            data = convert_to_serializable(data)
             with open(os.path.join(SAVE_PATH, f"{CURR_DATETIME}_experiment_results.json"), "w") as file:
                 json.dump(data, file)
 
