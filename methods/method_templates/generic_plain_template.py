@@ -18,13 +18,15 @@ class GenericPlainTemplate(Experiment):
                     'acc': acc_train,
                     'precision': precision_train,
                     'recall': recall_train,
-                    'f1': f1_train
+                    'f1': f1_train,
+                    'specificity': specificity_train
                 },
                 'test': {
                     'acc': acc_test,
                     'precision': precision_test,
                     'recall': recall_test,
-                    'f1': f1_test
+                    'f1': f1_test,
+                    'specificity': specificity_train
                 }
             }
         }

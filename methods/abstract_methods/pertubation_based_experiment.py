@@ -168,11 +168,11 @@ class PertubationBasedExperiment(MetricBasedExperiment):
             y_test = [_['label'] for _ in results['test']]
 
             train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = self.get_clf_results(x_train, y_train, x_test, y_test, config=self.config)
-            acc_train, precision_train, recall_train, f1_train, auc_train = train_res
-            acc_test, precision_test, recall_test, f1_test, auc_test = test_res
+            acc_train, precision_train, recall_train, f1_train, auc_train, specificity_train = train_res
+            acc_test, precision_test, recall_test, f1_test, auc_test, specificity_test = test_res
 
-            print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
-            print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
+            print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}, specificity_train: {specificity_train}")
+            print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}, specificity_test: {specificity_test}")
             
             # Clean up
             del self.base_model
@@ -193,13 +193,15 @@ class PertubationBasedExperiment(MetricBasedExperiment):
                         'acc': acc_train,
                         'precision': precision_train,
                         'recall': recall_train,
-                        'f1': f1_train
+                        'f1': f1_train,
+                        'specificity': specificity_train
                     },
                     'test': {
                         'acc': acc_test,
                         'precision': precision_test,
                         'recall': recall_test,
-                        'f1': f1_test
+                        'f1': f1_test,
+                        'specificity': specificity_test
                     }
                 },
                 'perturbations_info': {

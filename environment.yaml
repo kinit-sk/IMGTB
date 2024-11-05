@@ -31,4 +31,6 @@ dependencies:
     - spacy
     - nltk
     - rouge_score
+    - tf-keras
+    - imbalanced-learn
 

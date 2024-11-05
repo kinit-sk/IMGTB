@@ -187,13 +187,13 @@ class PerLanguageExpertsEnsemble(Experiment):
         y_train = []
         y_train_pred = []
         machine_prob_by_lang_train = []
-        acc_train, precision_train, recall_train, f1_train, auc_train = -1, -1, -1, -1, -1
+        acc_train, precision_train, recall_train, f1_train, auc_train, specificity_train = -1, -1, -1, -1, -1, -1
         if len(train_data["text"]) != 0:
             y_train_pred_prob, machine_prob_by_lang_train = self.get_predictions_for_multiple(train_data)
             y_train = train_label
             y_train_pred = [round(_) for _ in y_train_pred_prob]
             train_res = cal_metrics(y_train, y_train_pred, y_train_pred_prob)
-            acc_train, precision_train, recall_train, f1_train, auc_train = train_res
+            acc_train, precision_train, recall_train, f1_train, auc_train, specificity_train = train_res
 
         if self.threshold_calibration:
             print("Running threshold calibration")
@@ -209,9 +209,9 @@ class PerLanguageExpertsEnsemble(Experiment):
         y_test = test_label
 
         test_res = cal_metrics(y_test, y_test_pred, y_test_pred_prob)
-        acc_test, precision_test, recall_test, f1_test, auc_test = test_res
-        print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
-        print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
+        acc_test, precision_test, recall_test, f1_test, auc_test, specificity_test = test_res
+        print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}, specificity_train: {specificity_train}")
+        print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}, specificity_test: {specificity_test}")
  
 
         
@@ -228,13 +228,15 @@ class PerLanguageExpertsEnsemble(Experiment):
                     'acc': acc_train,
                     'precision': precision_train,
                     'recall': recall_train,
-                    'f1': f1_train
+                    'f1': f1_train,
+                    'specificity': specificity_train
                 },
                 'test': {
                     'acc': acc_test,
                     'precision': precision_test,
                     'recall': recall_test,
-                    'f1': f1_test
+                    'f1': f1_test,
+                    'specificity': specificity_test
                 }
             },
             "config": self.config

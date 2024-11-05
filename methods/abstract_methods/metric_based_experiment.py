@@ -142,11 +142,11 @@ class MetricBasedExperiment(Experiment):
         y_test = test_label
         train_pred, test_pred, train_pred_prob, test_pred_prob, train_res, test_res = self.get_clf_results(x_train, y_train, x_test, y_test)
                 
-        acc_train, precision_train, recall_train, f1_train, auc_train = train_res
-        acc_test, precision_test, recall_test, f1_test, auc_test = test_res
+        acc_train, precision_train, recall_train, f1_train, auc_train, specificity_train = train_res
+        acc_test, precision_test, recall_test, f1_test, auc_test, specificity_test = test_res
 
-        print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}")
-        print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}")
+        print(f"{self.name} acc_train: {acc_train}, precision_train: {precision_train}, recall_train: {recall_train}, f1_train: {f1_train}, auc_train: {auc_train}, specificity_train: {specificity_train}")
+        print(f"{self.name} acc_test: {acc_test}, precision_test: {precision_test}, recall_test: {recall_test}, f1_test: {f1_test}, auc_test: {auc_test}, specificity_test: {specificity_test}")
         
         end_time = time.time()
         
@@ -169,13 +169,15 @@ class MetricBasedExperiment(Experiment):
                     'acc': acc_train,
                     'precision': precision_train,
                     'recall': recall_train,
-                    'f1': f1_train
+                    'f1': f1_train,
+                    'specificity': specificity_train
                 },
                 'test': {
                     'acc': acc_test,
                     'precision': precision_test,
                     'recall': recall_test,
-                    'f1': f1_test
+                    'f1': f1_test,
+                    'specificity': specificity_test
                 }
             },
             "config": self.config
@@ -193,17 +195,17 @@ class MetricBasedExperiment(Experiment):
         y_train_pred = clf.predict(x_train)
         y_train_pred_prob = clf.predict_proba(x_train)
         y_train_pred_prob = [_[1] for _ in y_train_pred_prob]
-        acc_train, precision_train, recall_train, f1_train, auc_train = cal_metrics(
+        acc_train, precision_train, recall_train, f1_train, auc_train, specificity_train = cal_metrics(
             y_train, y_train_pred, y_train_pred_prob)
-        train_res = acc_train, precision_train, recall_train, f1_train, auc_train
+        train_res = acc_train, precision_train, recall_train, f1_train, auc_train, specificity_train
 
         y_test_pred = clf.predict(x_test)
         y_test_pred_prob = clf.predict_proba(x_test)
         
         y_test_pred_prob = [_[1] for _ in y_test_pred_prob]
-        acc_test, precision_test, recall_test, f1_test, auc_test = cal_metrics(
+        acc_test, precision_test, recall_test, f1_test, auc_test, specificity_test = cal_metrics(
             y_test, y_test_pred, y_test_pred_prob)
-        test_res = acc_test, precision_test, recall_test, f1_test, auc_test
+        test_res = acc_test, precision_test, recall_test, f1_test, auc_test, specificity_test
 
         return y_train_pred, y_test_pred, y_train_pred_prob, y_test_pred_prob, train_res, test_res
 
